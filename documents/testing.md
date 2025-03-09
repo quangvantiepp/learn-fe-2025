@@ -8,7 +8,8 @@
 ✅ API có được gọi đúng không?
 
 ### example button
-  import React from 'react';
+```javascript
+ import React from 'react';
 
   interface ButtonProps {
     label: string;
@@ -20,16 +21,20 @@
   };
 
   export default Button;
+```
 ####  Test: Kiểm tra xem button có hiển thị đúng không.
-  import { render, screen } from '@testing-library/react';
+```javascript
+import { render, screen } from '@testing-library/react';
   import Button from './Button';
 
   test('renders button with correct label', () => {
     render(<Button label="Click me" onClick={() => {}} />);
     expect(screen.getByText('Click me')).toBeInTheDocument();
   });
+```
 #### Kiểm tra Event (Người dùng tương tác có đúng không?)
-  import { render, screen, fireEvent } from '@testing-library/react';
+```javascript
+import { render, screen, fireEvent } from '@testing-library/react';
   import { vi } from 'vitest';
   import Button from './Button';
 
@@ -40,7 +45,9 @@
     fireEvent.click(screen.getByText('Click me'));
     expect(handleClick).toHaveBeenCalledTimes(1); // ✅ Hàm được gọi 1 lần
   });
+```
 #### Kiểm tra Props (Component nhận props đúng không?)
+```javascript
 const Card = ({ title }: { title: string }) => {
   return <div>{title}</div>;
 };
@@ -53,7 +60,9 @@ test('renders title correctly', () => {
   render(<Card title="Hello World" />);
   expect(screen.getByText('Hello World')).toBeInTheDocument();
 });
+```
 #### Kiểm tra State (Component thay đổi state đúng không?)
+```javascript
 import { useState } from 'react';
 
 const Counter = () => {
@@ -68,6 +77,7 @@ const Counter = () => {
 };
 
 export default Counter;
+
 //////
 import { render, screen, fireEvent } from '@testing-library/react';
 import Counter from './Counter';
@@ -79,7 +89,10 @@ test('increases count when button is clicked', () => {
   fireEvent.click(button);
   expect(screen.getByText('Count: 1')).toBeInTheDocument();
 });
+```
+
 #### Kiểm tra Conditional Rendering (Hiển thị đúng khi dữ liệu thay đổi?)
+```javascript
 const UserGreeting = ({ isLoggedIn }: { isLoggedIn: boolean }) => {
   return <h1>{isLoggedIn ? 'Welcome back!' : 'Please log in'}</h1>;
 };
@@ -95,8 +108,9 @@ test('shows correct message based on login status', () => {
   render(<UserGreeting isLoggedIn={false} />);
   expect(screen.getByText('Please log in')).toBeInTheDocument();
 });
-
+```
 ####  Kiểm tra API Calls (Mock API để test dữ liệu trả về)
+```javascript
 import { useEffect, useState } from 'react';
 
 const FetchData = () => {
@@ -112,6 +126,7 @@ const FetchData = () => {
 };
 
 export default FetchData;
+
 /////
 import { render, screen, waitFor } from '@testing-library/react';
 import FetchData from './FetchData';
@@ -127,3 +142,4 @@ test('fetches and displays data', async () => {
   render(<FetchData />);
   await waitFor(() => expect(screen.getByText('Hello from API')).toBeInTheDocument());
 });
+```
