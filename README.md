@@ -48,3 +48,37 @@ export default tseslint.config({
   },
 })
 ```
+## design pattern
+https://uiverse.io/
+
+
+
+## git rebase
+
+
+## msw mock API
+
+
+## Vitest react
+### Vitest (tích hợp sẵn trong Vite, thay thế Jest)
+pnpm add -D vitest @testing-library/react @testing-library/jest-dom
+### Cannot find name 'test'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha`.
+
+### config vite.config.ts
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  test:{
+    globals: true,
+    environment: "jsdom",
+    setupFiles: './src/setupTests.ts'
+  }
+})
+- when have error pnpm add -D jsdom
+
+
+
+
