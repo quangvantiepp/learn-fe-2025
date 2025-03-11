@@ -103,8 +103,15 @@ Thay vì dùng git pull origin main (mặc định dùng merge), bạn sẽ dùn
 
 ```sh
 git checkout feature1
+# commit hết code trước khi rebase
+git add *
+git commit -m "commit code"
+# tiến hành rebase
 git fetch origin
 git rebase origin/main
+
+or git pull --rebase origin main 
+# the same
 ```
 Giải thích:
 git fetch origin: Lấy thông tin mới nhất từ remote mà không merge ngay.
@@ -173,3 +180,5 @@ Sau đó tạo pull request như bình thường.
 ```
 // change by develop
 // create from feature1
+
+// feature1 changed
