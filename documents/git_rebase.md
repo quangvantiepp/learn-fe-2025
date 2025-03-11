@@ -182,3 +182,4 @@ Sau đó tạo pull request như bình thường.
 // create from feature1
 
 // feature1 changed
+// change by develop new
