@@ -72,8 +72,68 @@ Cách dùng: git rebase <branch> hoặc git rebase -i cho chỉnh sửa nâng ca
 Cẩn thận: Chỉ dùng trên nhánh cá nhân, tránh nhánh chia sẻ.
 
 
-## step by step
-### 1, Quy trình cũ của bạn với git merge:
+## step by step ////////////////////////////////////////////////////////////
+
+### 1, Quy trình mới với git rebase:
+Với git rebase, mục tiêu là giữ lịch sử commit tuyến tính hơn. Dưới đây là cách làm:
+
+Bước 1: Cập nhật nhánh feature1 bằng cách rebase lên main
+Thay vì dùng git pull origin main (mặc định dùng merge), bạn sẽ dùng git fetch để lấy thay đổi từ remote, rồi git rebase:
+
+```sh
+# kéo các thay đổi từ đồng đội khác trên nhánh chung về
+git checkout main
+git pull origin main
+
+# trở lại nhánh làm việc
+git checkout feature1
+# commit hết code trước khi rebase
+git add *
+git commit -m "commit code"
+# tiến hành rebase
+git fetch origin
+git rebase origin/main
+
+# hoặc dùng lệnh này gộp giữa fetch và rebase
+or git pull --rebase origin main 
+
+```
+Giải thích:
+git fetch origin: Lấy thông tin mới nhất từ remote mà không merge ngay.
+git rebase origin/main: Áp dụng các commit của nhánh feature1 lên trên đầu nhánh main từ remote.
+Nếu có xung đột:
+Git sẽ dừng lại, bạn sửa file xung đột.
+Sau khi sửa:
+
+```sh
+git add <file>
+git rebase --continue
+```
+Tiếp tục cho đến khi hoàn tất.
+
+Bước 2: Add file đang chỉnh sửa và commit, hoặc lúc này có thể tiếp tục chỉnh sửa ở local rồi tiến hành add và commit như bình thường
+Sau khi rebase xong, bạn tiếp tục chỉnh sửa file trên nhánh feature1:
+
+```sh
+git add <file>
+git commit -m "Thông điệp commit"
+```
+Bước 3: Push lên nhánh feature1
+Vì lịch sử commit đã bị thay đổi bởi git rebase, bạn cần dùng --force hoặc --force-with-lease để đẩy lên remote:
+
+```sh
+git push origin feature1 --force-with-lease
+```
+
+Lưu ý:
+--force-with-lease: An toàn hơn --force, vì nó kiểm tra xem có ai khác thay đổi nhánh không trước khi đẩy.
+Chỉ dùng force push nếu nhánh feature1 là nhánh cá nhân và chưa ai khác làm việc trên đó.
+
+Bước 4: Tạo pull request tới main
+Quy trình này không thay đổi. Bạn vào giao diện GitHub/GitLab/Bitbucket (tùy nơi bạn dùng) và tạo pull request từ feature1 sang main. Do lịch sử đã tuyến tính, pull request sẽ dễ đọc hơn.
+
+
+### 2, Quy trình cũ của bạn với git merge:
 Pull từ main về để cập nhật nhánh feature1:
 ```sh
 git checkout feature1
@@ -95,56 +155,6 @@ git push origin feature1
 Tạo pull request từ feature1 tới main.
 
 
-### 2, Quy trình mới với git rebase:
-Với git rebase, mục tiêu là giữ lịch sử commit tuyến tính hơn. Dưới đây là cách làm:
-
-Bước 1: Cập nhật nhánh feature1 bằng cách rebase lên main
-Thay vì dùng git pull origin main (mặc định dùng merge), bạn sẽ dùng git fetch để lấy thay đổi từ remote, rồi git rebase:
-
-```sh
-git checkout feature1
-# commit hết code trước khi rebase
-git add *
-git commit -m "commit code"
-# tiến hành rebase
-git fetch origin
-git rebase origin/main
-
-or git pull --rebase origin main 
-# the same
-```
-Giải thích:
-git fetch origin: Lấy thông tin mới nhất từ remote mà không merge ngay.
-git rebase origin/main: Áp dụng các commit của nhánh feature1 lên trên đầu nhánh main từ remote.
-Nếu có xung đột:
-Git sẽ dừng lại, bạn sửa file xung đột.
-Sau khi sửa:
-
-```sh
-git add <file>
-git rebase --continue
-```
-Tiếp tục cho đến khi hoàn tất.
-Bước 2: Add file đang chỉnh sửa và commit
-Sau khi rebase xong, bạn tiếp tục chỉnh sửa file trên nhánh feature1:
-
-```sh
-git add <file>
-git commit -m "Thông điệp commit"
-```
-Bước 3: Push lên nhánh feature1
-Vì lịch sử commit đã bị thay đổi bởi git rebase, bạn cần dùng --force hoặc --force-with-lease để đẩy lên remote:
-
-```sh
-git push origin feature1 --force-with-lease
-```
-
-Lưu ý:
---force-with-lease: An toàn hơn --force, vì nó kiểm tra xem có ai khác thay đổi nhánh không trước khi đẩy.
-Chỉ dùng force push nếu nhánh feature1 là nhánh cá nhân và chưa ai khác làm việc trên đó.
-
-Bước 4: Tạo pull request tới main
-Quy trình này không thay đổi. Bạn vào giao diện GitHub/GitLab/Bitbucket (tùy nơi bạn dùng) và tạo pull request từ feature1 sang main. Do lịch sử đã tuyến tính, pull request sẽ dễ đọc hơn.
 
 So sánh lịch sử commit
 Với git merge:
