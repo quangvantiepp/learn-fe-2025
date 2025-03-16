@@ -3,6 +3,10 @@ import reactLogo from "./assets/react.svg";
 import viteLogo from "/vite.svg";
 import "./App.css";
 import { Header } from "./pages/home/ui";
+import FileUploader from "./components/base/upload/drag-and-drop-gpt";
+import FileUpload from "./components/base/upload/drag-and-drop-grok";
+import FileUploaderClaude from "./components/base/upload/drag-and-drop-claude";
+import FileUploaderNoLoading from "./components/base/upload/drag-and-drop-claude-no-loading";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -30,6 +34,20 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
       <Header />
+
+      <>gpt</>
+      <FileUploader />
+      <>grok</>
+      <FileUpload />
+      <>claude</>
+      <FileUploaderClaude />
+      <>claude</>
+      <FileUploaderNoLoading
+        maxSize={1024 * 10}
+        accept="image/*"
+        multiple={true}
+        onFileSelect={(files) => console.log("on selected:", files)}
+      />
     </>
   );
 }
