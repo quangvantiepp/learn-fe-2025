@@ -1,6 +1,6 @@
-import React, { useState, useRef, useCallback } from "react";
 import styled from "@emotion/styled";
-import { Cross2Icon, CheckIcon, UploadIcon } from "@radix-ui/react-icons";
+import { CheckCircledIcon, TrashIcon, UploadIcon } from "@radix-ui/react-icons";
+import React, { useCallback, useRef, useState } from "react";
 
 // Types
 export interface FileItem {
@@ -9,7 +9,7 @@ export interface FileItem {
   preview?: string;
 }
 
-interface FileUploaderProps {
+interface UploadProps {
   multiple?: boolean;
   accept?: string;
   maxSize?: number; // in bytes
@@ -150,7 +150,7 @@ const HiddenInput = styled.input`
 `;
 
 // Utility Functions
-export const formatFileSize = (bytes: number): string => {
+const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return "0 Bytes";
 
   const sizes = ["Bytes", "KB", "MB", "GB"];
@@ -163,7 +163,7 @@ const getFileExtension = (fileName: string): string => {
 };
 
 // Main Component
-const FileUploaderNoLoading: React.FC<FileUploaderProps> = ({
+const Upload: React.FC<UploadProps> = ({
   multiple = false,
   accept,
   maxSize,
@@ -327,10 +327,14 @@ const FileUploaderNoLoading: React.FC<FileUploaderProps> = ({
                 </div>
               </FileInfo>
 
-              <CheckIcon width={16} height={16} style={{ color: "#10b981" }} />
+              <CheckCircledIcon
+                width={16}
+                height={16}
+                style={{ color: "#10b981" }}
+              />
 
               <ActionButton onClick={() => handleRemoveFile(file.id)}>
-                <Cross2Icon width={16} height={16} />
+                <TrashIcon width={16} height={16} color="#ef4444" />
               </ActionButton>
             </FileItem>
           ))}
@@ -340,4 +344,4 @@ const FileUploaderNoLoading: React.FC<FileUploaderProps> = ({
   );
 };
 
-export default FileUploaderNoLoading;
+export default Upload;
