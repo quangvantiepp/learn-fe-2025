@@ -1,0 +1,134 @@
+// Types - cập nhật interface UploadProps để thêm onFileChange
+interface UploadProps {
+  multiple?: boolean;
+  accept?: string;
+  maxSize?: number; // in bytes
+  onFileSelect?: (files: File[]) => void;
+  onFileRemove?: (fileId: string) => void;
+  onFileChange?: (files: File[] | null, hasError: boolean) => void;
+}
+
+// Hàm processFiles
+const processFiles = useCallback(
+  (fileList: FileList) => {
+    const newFileItems: FileItem[] = [];
+    let hasError = false;
+
+    Array.from(fileList).forEach((file) => {
+      const fileId = `${file.name}-${Date.now()}`;
+      const newFile: FileItem = {
+        id: fileId,
+        file,
+        hasError: false
+      };
+
+      if (maxSize && file.size > maxSize) {
+        newFile.hasError = true;
+        newFile.errorMessage = `File exceeds maximum size limit of ${formatFileSize(maxSize)}`;
+        hasError = true;
+      }
+
+      if (file.type.startsWith("image/")) {
+        newFile.preview = URL.createObjectURL(file);
+      }
+
+      newFileItems.push(newFile);
+    });
+
+    // Cập nhật state với files mới
+    setFiles((prev) => {
+      const updatedFiles = sortFiles([...prev, ...newFileItems]);
+      
+      // Kiểm tra nếu có bất kỳ file lỗi nào trong toàn bộ danh sách
+      const anyErrors = updatedFiles.some(file => file.hasError);
+      
+      // Gọi callback onFileChange (nếu được cung cấp)
+      if (onFileChange) {
+        if (anyErrors) {
+          // Nếu có lỗi, trả về null và thông báo lỗi
+          onFileChange(null, true);
+        } else {
+          // Nếu không có lỗi, trả về danh sách file
+          const validFiles = updatedFiles.map(item => item.file);
+          onFileChange(validFiles, false);
+        }
+      }
+      
+      return updatedFiles;
+    });
+    
+    // Vẫn giữ callback onFileSelect cho khả năng tương thích ngược
+    if (onFileSelect) {
+      const validFiles = newFileItems
+        .filter(item => !item.hasError)
+        .map(item => item.file);
+      onFileSelect(validFiles);
+    }
+  },
+  [maxSize, onFileSelect, onFileChange]
+);
+
+// Cập nhật các hàm khác để gọi onFileChange
+const handleRemoveFile = (fileId: string) => {
+  setFiles((prev) => {
+    const updatedFiles = prev.filter((file) => file.id !== fileId);
+    const removedFile = prev.find((file) => file.id === fileId);
+
+    if (removedFile?.preview) {
+      URL.revokeObjectURL(removedFile.preview);
+    }
+
+    if (onFileRemove && !removedFile?.hasError) {
+      onFileRemove(fileId);
+    }
+
+    // Cập nhật onFileChange sau khi xóa file
+    if (onFileChange) {
+      const anyErrors = updatedFiles.some(file => file.hasError);
+      if (anyErrors) {
+        onFileChange(null, true);
+      } else {
+        const validFiles = updatedFiles.map(item => item.file);
+        onFileChange(validFiles, false);
+      }
+    }
+
+    return sortFiles(updatedFiles);
+  });
+};
+
+// Tương tự cập nhật các hàm clearAllFiles và clearErrorFiles
+const clearAllFiles = () => {
+  files.forEach(file => {
+    if (file.preview) {
+      URL.revokeObjectURL(file.preview);
+    }
+  });
+  setFiles([]);
+  
+  // Gọi onFileChange với mảng rỗng và không có lỗi
+  if (onFileChange) {
+    onFileChange([], false);
+  }
+};
+
+const clearErrorFiles = () => {
+  setFiles(prev => {
+    const validFiles = prev.filter(file => !file.hasError);
+    
+    // Revoke object URLs for files being removed
+    prev.forEach(file => {
+      if (file.hasError && file.preview) {
+        URL.revokeObjectURL(file.preview);
+      }
+    });
+    
+    // Gọi onFileChange với danh sách file hợp lệ
+    if (onFileChange) {
+      const files = validFiles.map(item => item.file);
+      onFileChange(files, false);
+    }
+    
+    return sortFiles(validFiles);
+  });
+};
