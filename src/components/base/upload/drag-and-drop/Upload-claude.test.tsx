@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import Upload from "./upload-claude-no-loading"; // Adjust the import path as needed
+import Upload from "./drag-and-drop-claude-base"; // Adjust the import path as needed
 
 // Mock createObjectURL and revokeObjectURL
 global.URL.createObjectURL = vi.fn(() => "mock-object-url");

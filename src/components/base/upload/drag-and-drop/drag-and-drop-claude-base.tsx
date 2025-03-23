@@ -1,5 +1,10 @@
 import styled from "@emotion/styled";
-import { CheckCircledIcon, TrashIcon, UploadIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  CrossCircledIcon,
+  TrashIcon,
+  UploadIcon,
+} from "@radix-ui/react-icons";
 import React, { useCallback, useRef, useState } from "react";
 
 // Types
@@ -7,6 +12,8 @@ export interface FileItem {
   id: string;
   file: File;
   preview?: string;
+  hasError?: boolean;
+  errorMessage?: string;
 }
 
 interface UploadProps {
@@ -80,14 +87,14 @@ const FilesList = styled.div`
   overflow-y: auto;
 `;
 
-const FileItem = styled.div`
+const FileItem = styled.div<{ hasError?: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px;
   border-radius: 6px;
-  background-color: #f9fafb;
-  border: 1px solid #f3f4f6;
+  background-color: ${(props) => (props.hasError ? "#FEF2F2" : "#f9fafb")};
+  border: 1px solid ${(props) => (props.hasError ? "#FEE2E2" : "#f3f4f6")};
 `;
 
 const FilePreview = styled.div<{ bgImage?: string }>`
@@ -126,6 +133,12 @@ const FileInfo = styled.div`
     font-size: 12px;
     color: #6b7280;
   }
+
+  .error-message {
+    font-size: 12px;
+    color: #ef4444;
+    margin-top: 2px;
+  }
 `;
 
 const ActionButton = styled.button`
@@ -149,6 +162,55 @@ const HiddenInput = styled.input`
   display: none;
 `;
 
+// New styled components for stats and control buttons
+const StatsContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #f3f4f6;
+  margin-top: 8px;
+`;
+
+const Stats = styled.div`
+  display: flex;
+  gap: 16px;
+`;
+
+const StatItem = styled.div<{ error?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: ${(props) => (props.error ? "#ef4444" : "#111827")};
+`;
+
+const ControlButtons = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const Button = styled.button<{ variant?: string }>`
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: ${(props) => (props.variant === "danger" ? "white" : "#6b7280")};
+  background-color: ${(props) =>
+    props.variant === "danger" ? "#ef4444" : "#f3f4f6"};
+
+  &:hover {
+    background-color: ${(props) =>
+      props.variant === "danger" ? "#dc2626" : "#e5e7eb"};
+  }
+`;
+
 // Utility Functions
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return "0 Bytes";
@@ -162,6 +224,22 @@ const getFileExtension = (fileName: string): string => {
   return fileName.split(".").pop() || "";
 };
 
+// Hàm sắp xếp file - dùng trong component Upload
+const sortFiles = (files: FileItem[]): FileItem[] => {
+  // Sắp xếp file lỗi lên đầu
+  return [...files].sort((a, b) => {
+    // Nếu a có lỗi và b không có lỗi, a sẽ lên trước
+    if (a.hasError && !b.hasError) return -1;
+    // Nếu b có lỗi và a không có lỗi, b sẽ lên trước
+    if (!a.hasError && b.hasError) return 1;
+    // Nếu cả hai đều có lỗi hoặc cả hai đều không có lỗi, sắp xếp theo thời gian thêm vào (mới nhất lên đầu)
+    return (
+      new Date(b.id.split("-")[1]).getTime() -
+      new Date(a.id.split("-")[1]).getTime()
+    );
+  });
+};
+
 // Main Component
 const Upload: React.FC<UploadProps> = ({
   multiple = false,
@@ -173,17 +251,24 @@ const Upload: React.FC<UploadProps> = ({
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragCounter = useRef<number>(0);
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    dragCounter.current += 1;
     setIsDragActive(true);
   }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragActive(false);
+
+    dragCounter.current -= 1;
+    if (dragCounter.current === 0) {
+      setIsDragActive(false);
+    }
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -197,18 +282,21 @@ const Upload: React.FC<UploadProps> = ({
       const newFileItems: FileItem[] = [];
 
       Array.from(fileList).forEach((file) => {
-        if (maxSize && file.size > maxSize) {
-          console.warn(`File ${file.name} exceeds maximum size limit`);
-          return;
-        }
-
-        newFiles.push(file);
-
         const fileId = `${file.name}-${Date.now()}`;
         const newFile: FileItem = {
           id: fileId,
           file,
+          hasError: false,
         };
+
+        if (maxSize && file.size > maxSize) {
+          newFile.hasError = true;
+          newFile.errorMessage = `File exceeds maximum size limit of ${formatFileSize(
+            maxSize
+          )}`;
+        } else {
+          newFiles.push(file);
+        }
 
         if (file.type.startsWith("image/")) {
           newFile.preview = URL.createObjectURL(file);
@@ -217,12 +305,11 @@ const Upload: React.FC<UploadProps> = ({
         newFileItems.push(newFile);
       });
 
-      if (newFiles.length > 0) {
-        setFiles((prev) => [...prev, ...newFileItems]);
+      // Sử dụng hàm sortFiles để sắp xếp tất cả các file
+      setFiles((prev) => sortFiles([...prev, ...newFileItems]));
 
-        if (onFileSelect) {
-          onFileSelect(newFiles);
-        }
+      if (newFiles.length > 0 && onFileSelect) {
+        onFileSelect(newFiles);
       }
     },
     [maxSize, onFileSelect]
@@ -232,13 +319,19 @@ const Upload: React.FC<UploadProps> = ({
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      dragCounter.current = 0;
       setIsDragActive(false);
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (!multiple && e.dataTransfer.files.length > 1) {
+          alert("You can only upload one file");
+          return;
+        }
         processFiles(e.dataTransfer.files);
       }
     },
-    [processFiles]
+    [processFiles, multiple]
   );
 
   const handleFileInputChange = useCallback(
@@ -268,7 +361,7 @@ const Upload: React.FC<UploadProps> = ({
         URL.revokeObjectURL(removedFile.preview);
       }
 
-      if (onFileRemove) {
+      if (onFileRemove && !removedFile?.hasError) {
         onFileRemove(fileId);
       }
 
@@ -283,6 +376,36 @@ const Upload: React.FC<UploadProps> = ({
 
     const ext = getFileExtension(file.file.name);
     return <FilePreview>{ext.toUpperCase()}</FilePreview>;
+  };
+
+  // File statistics
+  const totalFiles = files.length;
+  const errorFiles = files.filter((file) => file.hasError).length;
+  const successFiles = totalFiles - errorFiles;
+
+  // New control functions
+  const clearAllFiles = () => {
+    files.forEach((file) => {
+      if (file.preview) {
+        URL.revokeObjectURL(file.preview);
+      }
+    });
+    setFiles([]);
+  };
+
+  const clearErrorFiles = () => {
+    setFiles((prev) => {
+      const validFiles = prev.filter((file) => !file.hasError);
+
+      // Revoke object URLs for files being removed
+      prev.forEach((file) => {
+        if (file.hasError && file.preview) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+
+      return validFiles;
+    });
   };
 
   return (
@@ -314,31 +437,72 @@ const Upload: React.FC<UploadProps> = ({
         onChange={handleFileInputChange}
       />
 
-      {files.length > 0 && (
-        <FilesList>
-          {files.map((file) => (
-            <FileItem key={file.id}>
-              {getFilePreview(file)}
+      {totalFiles > 0 && (
+        <>
+          <StatsContainer>
+            <Stats>
+              <StatItem>
+                <CheckCircledIcon
+                  width={16}
+                  height={16}
+                  style={{ color: "#10b981" }}
+                />
+                {successFiles} file{successFiles !== 1 ? "s" : ""} uploaded
+              </StatItem>
+              {errorFiles > 0 && (
+                <StatItem error>
+                  <CrossCircledIcon width={16} height={16} />
+                  {errorFiles} file{errorFiles !== 1 ? "s" : ""} with errors
+                </StatItem>
+              )}
+            </Stats>
+            <ControlButtons>
+              {errorFiles > 0 && (
+                <Button onClick={clearErrorFiles}>Clear error files</Button>
+              )}
+              <Button variant="danger" onClick={clearAllFiles}>
+                <TrashIcon width={14} height={14} />
+                Clear all
+              </Button>
+            </ControlButtons>
+          </StatsContainer>
 
-              <FileInfo>
-                <div className="file-name">{file.file.name}</div>
-                <div className="file-size">
-                  {formatFileSize(file.file.size)}
-                </div>
-              </FileInfo>
+          <FilesList>
+            {files.map((file) => (
+              <FileItem key={file.id} hasError={file.hasError}>
+                {getFilePreview(file)}
 
-              <CheckCircledIcon
-                width={16}
-                height={16}
-                style={{ color: "#10b981" }}
-              />
+                <FileInfo>
+                  <div className="file-name">{file.file.name}</div>
+                  <div className="file-size">
+                    {formatFileSize(file.file.size)}
+                  </div>
+                  {file.hasError && (
+                    <div className="error-message">{file.errorMessage}</div>
+                  )}
+                </FileInfo>
 
-              <ActionButton onClick={() => handleRemoveFile(file.id)}>
-                <TrashIcon width={16} height={16} color="#ef4444" />
-              </ActionButton>
-            </FileItem>
-          ))}
-        </FilesList>
+                {!file.hasError ? (
+                  <CheckCircledIcon
+                    width={16}
+                    height={16}
+                    style={{ color: "#10b981" }}
+                  />
+                ) : (
+                  <CrossCircledIcon
+                    width={16}
+                    height={16}
+                    style={{ color: "#ef4444" }}
+                  />
+                )}
+
+                <ActionButton onClick={() => handleRemoveFile(file.id)}>
+                  <TrashIcon width={16} height={16} color="#ef4444" />
+                </ActionButton>
+              </FileItem>
+            ))}
+          </FilesList>
+        </>
       )}
     </UploadContainer>
   );

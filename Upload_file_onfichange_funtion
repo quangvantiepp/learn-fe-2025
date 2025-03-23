@@ -132,3 +132,68 @@ const clearErrorFiles = () => {
     return sortFiles(validFiles);
   });
 };
+/////
+const processFiles = useCallback(
+  (fileList: FileList) => {
+    let newFiles: File[] = [];
+    const newFileItems: FileItem[] = [];
+
+    if (!multiple && fileList.length > 1) {
+      console.warn("Only one file is allowed.");
+      return;
+    }
+
+    Array.from(fileList).forEach((file, index) => {
+      if (!multiple && index > 0) return; // Chỉ lấy file đầu tiên nếu multiple = false
+
+      // Kiểm tra dung lượng file
+      if (maxSize && file.size > maxSize) {
+        console.warn(File ${file.name} exceeds maximum size limit);
+        return;
+      }
+
+      // Kiểm tra định dạng file
+      if (accept) {
+        const acceptedTypes = accept.split(",").map((type) => type.trim());
+        const isValidType = acceptedTypes.some((type) => {
+          if (type === "*") return true; // Chấp nhận mọi loại file
+          if (type.startsWith(".")) {
+            return file.name.toLowerCase().endsWith(type.toLowerCase()); // Kiểm tra phần mở rộng
+          }
+          if (type.endsWith("/*")) {
+            return file.type.startsWith(type.replace("/*", "")); // Kiểm tra MIME group (image/*, video/*, ...)
+          }
+          return file.type === type; // Kiểm tra MIME type chính xác
+        });
+
+        if (!isValidType) {
+          console.warn(File ${file.name} is not an accepted type);
+          return;
+        }
+      }
+
+      newFiles.push(file);
+
+      const fileId = ${file.name}-${Date.now()};
+      const newFile: FileItem = {
+        id: fileId,
+        file,
+      };
+
+      if (file.type.startsWith("image/")) {
+        newFile.preview = URL.createObjectURL(file);
+      }
+
+      newFileItems.push(newFile);
+    });
+
+    if (newFiles.length > 0) {
+      setFiles((prev) => (multiple ? [...prev, ...newFileItems] : newFileItems));
+
+      if (onFileSelect) {
+        onFileSelect(multiple ? newFiles : [newFiles[0]]);
+      }
+    }
+  },
+  [multiple, maxSize, accept, onFileSelect]
+);

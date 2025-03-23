@@ -1,16 +1,14 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
+import reactLogo from "./assets/react.svg";
+import FileUploader from "./components/base/upload/drag-and-drop-draft/drag-and-drop-gpt";
+import FileUpload from "./components/base/upload/drag-and-drop-draft/drag-and-drop-grok";
+import UploadFiles from "./components/base/upload/drag-and-drop/upload-files";
 import { Header } from "./pages/home/ui";
-import FileUploader from "./components/base/upload/drag-and-drop-gpt";
-import FileUpload from "./components/base/upload/drag-and-drop-grok";
-import FileUploaderClaude from "./components/base/upload/drag-and-drop-claude";
-import FileUploaderNoLoading from "./components/base/upload/upload-claude-no-loading";
-import Upload from "./components/base/upload/upload-claude-no-loading";
+import viteLogo from "/vite.svg";
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [count, setCount] = useState(false);
 
   return (
     <>
@@ -24,9 +22,7 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+        <button onClick={() => setCount(!count)}>count is {count}</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
@@ -40,8 +36,8 @@ function App() {
       <FileUploader />
       <>grok</>
       <FileUpload />
-      <>claude</>
-      <FileUploaderClaude />
+      {/* <>claude</>
+      <FileUploaderClaude /> */}
       <>claude</>
       {/* <FileUploaderNoLoading
         maxSize={1024 * 10}
@@ -49,10 +45,15 @@ function App() {
         multiple={true}
         onFileSelect={(files) => console.log("on selected:", files)}
       /> */}
-      <Upload
-        onFileRemove={(file) => console.log("on remove:", file)}
-        onFileSelect={(files) => console.log("on select:", files)}
-      />
+      {count && (
+        <UploadFiles
+          multiple={true}
+          accept="image/*"
+          maxSize={1024 * 1024 * 1}
+          onFileChange={(files) => console.log("on selected:", files)}
+          maxCount={2}
+        />
+      )}
     </>
   );
 }
