@@ -281,8 +281,9 @@ const UploadFiles: React.FC<UploadProps> = ({
         maxCount={maxCount}
         onChange={onChange}
         fileList={files}
-        type="button"
+        type="drag-and-drop"
         bnt={{ label: "Upload files" }}
+        supportFolders={true}
       />
       {totalFiles > 0 && (
         <>
