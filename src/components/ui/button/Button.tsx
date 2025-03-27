@@ -3,6 +3,7 @@ import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string;
+  children?: React.ReactNode;
 }
 
 const ButtonStyled = styled.button<ButtonProps>`
@@ -10,10 +11,10 @@ const ButtonStyled = styled.button<ButtonProps>`
   font-size: 16px;
 `;
 
-const Button = ({ label, disabled, onClick }: ButtonProps) => {
+const Button = ({ disabled, onClick, children }: ButtonProps) => {
   return (
     <ButtonStyled disabled={disabled} onClick={onClick}>
-      {label}
+      {children}
     </ButtonStyled>
   );
 };

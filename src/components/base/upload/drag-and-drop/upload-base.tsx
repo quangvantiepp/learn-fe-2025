@@ -22,6 +22,7 @@ export interface UploadProps {
   accept?: string;
   maxSize?: number; // in bytes
   fileList: FileItem[];
+  supportFolders?: boolean;
   onChange: (totalSelectFiles: FileItem[], selectedFiles: FileItem[]) => void;
 }
 
@@ -80,10 +81,6 @@ const FileItem = styled.div<{ hasError?: boolean }>`
   border-radius: 6px;
   background-color: ${(props) => (props.hasError ? "#FEF2F2" : "#f9fafb")};
   border: 1px solid ${(props) => (props.hasError ? "#FEE2E2" : "#f3f4f6")};
-`;
-
-const HiddenInput = styled.input`
-  display: none;
 `;
 
 // Utility Functions
@@ -184,6 +181,7 @@ const Upload: React.FC<UploadProps> = ({
   maxSize,
   maxCount,
   fileList,
+  supportFolders = false,
   onChange,
 }) => {
   const [isDragActive, setIsDragActive] = useState(false);
@@ -290,12 +288,16 @@ const Upload: React.FC<UploadProps> = ({
           </UploadText>
         </DropZone>
       )}
-      <HiddenInput
+      <input
+        style={{ display: "none" }}
         ref={inputRef}
         type="file"
         multiple={multiple}
         accept={accept}
         onChange={handleFileInputChange}
+        // @ts-expect-error - webkitdirectory
+        webkitdirectory={supportFolders ? "true" : undefined}
+        directory={supportFolders ? "true" : undefined}
       />
     </>
   );
