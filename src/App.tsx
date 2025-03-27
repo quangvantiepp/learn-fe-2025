@@ -4,6 +4,7 @@ import "./App.css";
 import UploadFiles from "./components/base/upload/drag-and-drop/upload-files";
 import Button from "./components/ui/button/Button";
 import { TooltipExample } from "./components/base/tooltip-radix-ui/tooltip-radix-ui";
+import { TooltipExampleCustom } from "./components/base/tooltip-radix-ui/custom-pure-tooltip";
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
@@ -32,6 +33,8 @@ function App() {
             onFileChange={(files) => setFileList(files)}
           />
           <TooltipExample />
+          <>Custom</>
+          <TooltipExampleCustom />
         </>
       }
     </>
