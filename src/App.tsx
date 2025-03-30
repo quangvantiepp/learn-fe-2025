@@ -3,8 +3,9 @@ import { useState } from "react";
 import "./App.css";
 import UploadFiles from "./components/base/upload/drag-and-drop/upload-files";
 import Button from "./components/ui/button/Button";
-import { TooltipExample } from "./components/base/tooltip-radix-ui/tooltip-radix-ui";
-import { TooltipExampleCustom } from "./components/base/tooltip-radix-ui/custom-pure-tooltip";
+import { TooltipExample } from "./components/base/tooltip/tooltip-radix-ui";
+import { TooltipExampleCustom } from "./components/base/tooltip/custom-pure-tooltip";
+import { TooltipExampleCustomFull } from "./components/base/tooltip/custom-pure-tooltip-full";
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
@@ -35,6 +36,8 @@ function App() {
           <TooltipExample />
           <>Custom</>
           <TooltipExampleCustom />
+          <>Tooltip full</>
+          <TooltipExampleCustomFull></TooltipExampleCustomFull>
         </>
       }
     </>
