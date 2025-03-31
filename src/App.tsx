@@ -3,10 +3,7 @@ import { useState } from "react";
 import "./App.css";
 import UploadFiles from "./components/base/upload/drag-and-drop/upload-files";
 import Button from "./components/ui/button/Button";
-import { TooltipExample } from "./components/base/tooltip/tooltip-radix-ui";
-import { TooltipExampleCustom } from "./components/base/tooltip/custom-pure-tooltip";
-import { TooltipExampleCustomFull } from "./components/base/tooltip/custom-pure-tooltip-full";
-
+import { TooltipExample } from "./components/base/tooltip";
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
 
@@ -33,11 +30,12 @@ function App() {
             maxSize={1024 * 1024 * 1}
             onFileChange={(files) => setFileList(files)}
           />
-          <TooltipExample />
+          {/* <TooltipExample /> */}
           <>Custom</>
-          <TooltipExampleCustom />
+          {/* <TooltipExampleCustom /> */}
           <>Tooltip full</>
-          <TooltipExampleCustomFull></TooltipExampleCustomFull>
+          {/* <TooltipExampleCustomFull></TooltipExampleCustomFull> */}
+          <TooltipExample />
         </>
       }
     </>
