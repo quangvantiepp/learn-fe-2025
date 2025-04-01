@@ -1,9 +1,15 @@
 import axios from "axios";
 import { useState } from "react";
 import "./App.css";
+import { TooltipExample } from "./components/base/tooltip";
 import UploadFiles from "./components/base/upload/drag-and-drop/upload-files";
 import Button from "./components/ui/button/Button";
-import { TooltipExample } from "./components/base/tooltip";
+
+import images1 from "../public/images1.jpg";
+import images2 from "../public/images2.jpg";
+import images3 from "../public/images3.jpg";
+import ImageViewerFull from "./components/base/image-viewer/image-viewer-full";
+
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
 
@@ -36,6 +42,7 @@ function App() {
           <>Tooltip full</>
           {/* <TooltipExampleCustomFull></TooltipExampleCustomFull> */}
           <TooltipExample />
+          <ImageViewerFull images={[images1, images2, images3]} />
         </>
       }
     </>
