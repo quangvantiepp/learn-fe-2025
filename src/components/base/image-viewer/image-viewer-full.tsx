@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 
 interface ImageViewerProps {
   images: string[]; // Array of image URLs
+  displayMode?: "single" | "double"; // New prop to control display mode
 }
 
 interface ViewportState {
@@ -11,7 +12,10 @@ interface ViewportState {
   rotation: number; // in degrees
 }
 
-const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
+const ImageViewerFull: React.FC<ImageViewerProps> = ({
+  images,
+  displayMode = "double", // Default to double mode
+}) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
     null
   );
@@ -26,6 +30,8 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
   const rightCanvasRef = useRef<HTMLCanvasElement>(null);
   const leftImageRef = useRef<HTMLImageElement | null>(null);
   const rightImageRef = useRef<HTMLImageElement | null>(null);
+  const leftCanvasContainerRef = useRef<HTMLDivElement>(null);
+  const rightCanvasContainerRef = useRef<HTMLDivElement>(null);
   const [thumbnailsLoaded, setThumbnailsLoaded] = useState<boolean[]>([]);
 
   const [isDragging, setIsDragging] = useState(false);
@@ -58,7 +64,7 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
       .catch((err) => console.error("Failed to load left image:", err));
 
     // Load the next image (if exists) for the right viewer
-    if (images[selectedImageIndex + 1]) {
+    if (displayMode === "double" && images[selectedImageIndex + 1]) {
       loadImage(images[selectedImageIndex + 1])
         .then((img) => {
           rightImageRef.current = img;
@@ -69,17 +75,17 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
       rightImageRef.current = null;
       clearCanvas(rightCanvasRef.current);
     }
-  }, [selectedImageIndex, images]);
+  }, [selectedImageIndex, images, displayMode]);
 
   // Redraw canvases when viewport state changes
   useEffect(() => {
     if (leftImageRef.current) {
       drawImage(leftCanvasRef.current, leftImageRef.current);
     }
-    if (rightImageRef.current) {
+    if (rightImageRef.current && displayMode === "double") {
       drawImage(rightCanvasRef.current, rightImageRef.current);
     }
-  }, [viewportState]);
+  }, [viewportState, displayMode]);
 
   // Preload thumbnails
   useEffect(() => {
@@ -95,6 +101,66 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
       img.src = imgUrl;
     });
   }, [images]);
+
+  // Fix scroll issue with wheel events
+  useEffect(() => {
+    const leftContainer = leftCanvasContainerRef.current;
+    const rightContainer = rightCanvasContainerRef.current;
+
+    const handleMouseWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const zoomIntensity = 0.1;
+      const delta = e.deltaY < 0 ? zoomIntensity : -zoomIntensity;
+      const newScale = Math.max(0.1, viewportState.scale + delta);
+
+      setViewportState((prev) => ({
+        ...prev,
+        scale: newScale,
+      }));
+
+      return false;
+    };
+
+    if (leftContainer) {
+      leftContainer.addEventListener("wheel", handleMouseWheel, {
+        passive: false,
+      });
+    }
+
+    if (rightContainer && displayMode === "double") {
+      rightContainer.addEventListener("wheel", handleMouseWheel, {
+        passive: false,
+      });
+    }
+
+    // Use capture phase to intercept wheel events before they bubble up
+    document.addEventListener(
+      "wheel",
+      (e) => {
+        if (
+          (leftContainer && leftContainer.contains(e.target as Node)) ||
+          (rightContainer && rightContainer.contains(e.target as Node))
+        ) {
+          e.preventDefault();
+        }
+      },
+      { passive: false, capture: true }
+    );
+
+    return () => {
+      if (leftContainer) {
+        leftContainer.removeEventListener("wheel", handleMouseWheel);
+      }
+      if (rightContainer) {
+        rightContainer.removeEventListener("wheel", handleMouseWheel);
+      }
+      document.removeEventListener("wheel", handleMouseWheel, {
+        capture: true,
+      });
+    };
+  }, [viewportState.scale, displayMode]);
 
   const drawImage = (
     canvas: HTMLCanvasElement | null,
@@ -162,20 +228,6 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
     });
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-
-    // Determine zoom direction and calculate new scale
-    const zoomIntensity = 0.1;
-    const delta = e.deltaY < 0 ? zoomIntensity : -zoomIntensity;
-    const newScale = Math.max(0.1, viewportState.scale + delta);
-
-    setViewportState((prev) => ({
-      ...prev,
-      scale: newScale,
-    }));
-  };
-
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     setDragStart({
@@ -232,6 +284,7 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
   const renderThumbnail = (imageUrl: string, index: number) => {
     return (
       <div
+        key={index}
         className="thumbnail-container"
         style={{
           width: "100%",
@@ -377,22 +430,36 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
           </div>
 
           {/* Image Viewer Area */}
-          <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              overflow: "hidden",
+              width: displayMode === "single" ? "50%" : "100%",
+              margin: displayMode === "single" ? "0 auto" : "0",
+            }}
+          >
             {/* Left Canvas */}
             <div
               className="image-view-panel"
-              style={{ flex: 1, padding: "10px" }}
+              style={{
+                flex: 1,
+                padding: "10px",
+                width: displayMode === "single" ? "100%" : "50%",
+              }}
             >
               <h3>Image {selectedImageIndex + 1}</h3>
               <div
+                ref={leftCanvasContainerRef}
                 className="canvas-container"
                 style={{
                   position: "relative",
                   height: "calc(100% - 50px)",
                   border: "1px solid #ddd",
                   backgroundColor: "#f0f0f0",
+                  overflow: "hidden",
+                  touchAction: "none", // Prevent touch actions for mobile
                 }}
-                onWheel={handleWheel}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -408,37 +475,41 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
             </div>
 
             {/* Right Canvas (shows next image if available) */}
-            <div
-              className="image-view-panel"
-              style={{ flex: 1, padding: "10px" }}
-            >
-              <h3>
-                {images[selectedImageIndex + 1]
-                  ? `Image ${selectedImageIndex + 2}`
-                  : "No image selected"}
-              </h3>
+            {displayMode === "double" && (
               <div
-                className="canvas-container"
-                style={{
-                  position: "relative",
-                  height: "calc(100% - 50px)",
-                  border: "1px solid #ddd",
-                  backgroundColor: "#f0f0f0",
-                }}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
+                className="image-view-panel"
+                style={{ flex: 1, padding: "10px" }}
               >
-                <canvas
-                  ref={rightCanvasRef}
-                  width={500}
-                  height={400}
-                  style={{ display: "block", width: "100%", height: "100%" }}
-                />
+                <h3>
+                  {images[selectedImageIndex + 1]
+                    ? `Image ${selectedImageIndex + 2}`
+                    : "No image selected"}
+                </h3>
+                <div
+                  ref={rightCanvasContainerRef}
+                  className="canvas-container"
+                  style={{
+                    position: "relative",
+                    height: "calc(100% - 50px)",
+                    border: "1px solid #ddd",
+                    backgroundColor: "#f0f0f0",
+                    overflow: "hidden",
+                    touchAction: "none", // Prevent touch actions for mobile
+                  }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                >
+                  <canvas
+                    ref={rightCanvasRef}
+                    width={500}
+                    height={400}
+                    style={{ display: "block", width: "100%", height: "100%" }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Status Bar */}
@@ -478,4 +549,5 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({ images }) => {
 export default ImageViewerFull;
 
 // Example usage:
-// <ImageViewer images={['url1.jpg', 'url2.jpg', 'url3.jpg']} />
+// Single mode: <ImageViewer images={['url1.jpg', 'url2.jpg']} displayMode="single" />
+// Double mode: <ImageViewer images={['url1.jpg', 'url2.jpg']} displayMode="double" />
