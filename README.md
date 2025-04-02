@@ -81,4 +81,12 @@ export default defineConfig({
 
 
 
+## run project
 
+### install and run
+```sh
+pnpm install
+
+pnpm run dev
+
+```

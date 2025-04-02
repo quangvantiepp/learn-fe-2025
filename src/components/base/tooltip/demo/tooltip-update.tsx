@@ -7,7 +7,7 @@ import React, {
   useMemo,
 } from "react";
 import styled from "@emotion/styled";
-import Button from "../../ui/button/Button";
+import Button from "../../../ui/button/Button";
 
 // Define tooltip colors
 const TOOLTIP_COLORS = {

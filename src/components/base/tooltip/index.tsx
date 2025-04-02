@@ -1,12 +1,12 @@
+import { css, SerializedStyles } from "@emotion/react";
+import styled from "@emotion/styled";
 import React, {
-  useState,
-  useRef,
   ReactNode,
   useCallback,
   useEffect,
-  useMemo,
+  useRef,
+  useState,
 } from "react";
-import styled from "@emotion/styled";
 import Button from "../../ui/button/Button";
 
 // Define tooltip colors
@@ -17,8 +17,25 @@ const TOOLTIP_COLORS = {
 } as const;
 
 type TooltipColor = keyof typeof TOOLTIP_COLORS;
-type TooltipPlacement = "top" | "bottom" | "left" | "right";
+type TooltipPlacement =
+  | "top"
+  | "bottom"
+  | "left"
+  | "right"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
 
+interface TooltipContentProps {
+  visible?: boolean;
+  placement: TooltipPlacement;
+  variant: TooltipColor;
+  zIndex?: number;
+  arrow?: boolean;
+  contentStyles?: SerializedStyles;
+  stayOpenOnHover?: boolean;
+}
 // Styled components
 const TooltipWrapper = styled.div`
   position: relative;
@@ -26,13 +43,7 @@ const TooltipWrapper = styled.div`
   max-width: 100%;
 `;
 
-const TooltipContent = styled.div<{
-  visible: boolean;
-  placement: TooltipPlacement;
-  variant: TooltipColor;
-  zIndex: number;
-  arrow?: boolean;
-}>`
+const TooltipContent = styled.div<TooltipContentProps>`
   position: absolute;
   background-color: ${(props) => TOOLTIP_COLORS[props.variant]};
   color: white;
@@ -41,9 +52,9 @@ const TooltipContent = styled.div<{
   z-index: ${(props) => props.zIndex};
   opacity: ${(props) => (props.visible ? 1 : 0)};
   visibility: ${(props) => (props.visible ? "visible" : "hidden")};
-  /* transition: opacity 0.2s, visibility 0.2s; */
-  transition: opacity 0.2s;
-  pointer-events: none;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: ${({ stayOpenOnHover }) =>
+    stayOpenOnHover ? "unset" : "none"};
 
   // Custom content styles
   max-width: 250px; /* Điều chỉnh chiều rộng tối đa theo nhu cầu */
@@ -74,18 +85,20 @@ const TooltipContent = styled.div<{
       )}
       `;
   }}
+
+  ${({ contentStyles }) => contentStyles}
 `;
 
 // Extracted function for placement styles
 const getPlacementStyles = (placement: TooltipPlacement) => {
   switch (placement) {
     case "top":
-      return `
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%) translateY(-8px);
-            margin-bottom: 8px;
-          `;
+      return css`
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        margin-bottom: 8px;
+      `;
     case "bottom":
       return `
             top: 100%;
@@ -127,6 +140,24 @@ const getArrowStyles = (
                 border-color: ${color} transparent transparent transparent;
               }
             `;
+    case "top-left":
+      return `
+                &::after {
+                  bottom: -8px;
+                  left: 16px;
+                  border-width: 8px 8px 0;
+                  border-color: ${color} transparent transparent transparent;
+                }
+              `;
+    case "top-right":
+      return `
+                &::after {
+                  bottom: -8px;
+                  right: 16px;
+                  border-width: 8px 8px 0;
+                  border-color: ${color} transparent transparent transparent;
+                }
+              `;
     case "bottom":
       return `
               &::after {
@@ -137,6 +168,24 @@ const getArrowStyles = (
                 border-color: transparent transparent ${color} transparent;
               }
             `;
+    case "bottom-left":
+      return `
+                &::after {
+                  top: -8px;
+                  left: 16px;
+                  border-width: 0 8px 8px;
+                  border-color: transparent transparent ${color} transparent;
+                }
+              `;
+    case "bottom-right":
+      return `
+                &::after {
+                  top: -8px;
+                  right: 16px;
+                  border-width: 0 8px 8px;
+                  border-color: transparent transparent ${color} transparent;
+                }
+              `;
     case "left":
       return `
               &::after {
@@ -162,15 +211,14 @@ const getArrowStyles = (
 };
 
 // Props interface
-interface TooltipProps {
+interface TooltipProps extends TooltipContentProps {
   children: ReactNode;
   content: ReactNode;
-  placement?: TooltipPlacement;
-  variant?: TooltipColor;
   mouseEnterDelay?: number;
   mouseLeaveDelay?: number;
-  zIndex?: number;
-  arrow?: boolean;
+  stayOpenOnHover?: boolean;
+  autoAdjustOverflow?: boolean;
+  open?: boolean;
 }
 
 const Tooltip: React.FC<TooltipProps> = ({
@@ -182,6 +230,10 @@ const Tooltip: React.FC<TooltipProps> = ({
   mouseLeaveDelay = 100,
   zIndex = 1000,
   arrow = true,
+  contentStyles,
+  autoAdjustOverflow = true,
+  stayOpenOnHover = true,
+  open,
 }) => {
   const [controlInfo, setControlInfo] = useState<{
     isOpen: boolean;
@@ -192,74 +244,159 @@ const Tooltip: React.FC<TooltipProps> = ({
   });
 
   const mouseEnterTimer = useRef<NodeJS.Timeout | null>(null);
-  const mouseLeaveTimerTimer = useRef<NodeJS.Timeout | null>(null);
+  const mouseLeaveTimer = useRef<NodeJS.Timeout | null>(null);
+  const placementUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
+  const isControlled = open !== undefined;
+  const isVisible = isControlled ? open : controlInfo.isOpen;
+
   useEffect(() => {
     return () => {
-      clearTimers();
+      clearAllTimers();
     };
   }, []);
 
   useEffect(() => {
     if (!controlInfo.isOpen) {
-      setTimeout(() => {
+      if (placementUpdateTimer.current) {
+        clearTimeout(placementUpdateTimer.current);
+        placementUpdateTimer.current = null;
+      }
+
+      placementUpdateTimer.current = setTimeout(() => {
         setControlInfo((prev) => ({
           ...prev,
           placement: placement,
         }));
-      }, 0);
+      }, 200); // Delay to ensure tooltip is hidden before changing placement, animation time is 0.2s in styled component visibility 0.2s
     }
   }, [controlInfo.isOpen, placement]);
 
   // Ensure tooltip is visible in viewport
-  const ensureVisibleInViewport = useCallback(
-    (tooltipRect: DOMRect | null) => {
-      if (!tooltipRect) return;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+  const calculateOptimalPlacement = useCallback(() => {
+    if (!wrapperRef.current || !tooltipRef.current) return placement;
 
-      let newPlacement = controlInfo.placement;
+    const wrapperRect = wrapperRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
-      if (tooltipRect.left < 0) {
-        newPlacement = "right";
-      } else if (tooltipRect.right > viewportWidth) {
-        newPlacement = "left";
-      }
+    // Kiểm tra không gian cho mỗi hướng cơ bản
+    const hasSpaceAbove = wrapperRect.top >= tooltipRect.height + 8;
+    const hasSpaceBelow =
+      viewportHeight - wrapperRect.bottom >= tooltipRect.height + 8;
+    const hasSpaceLeft = wrapperRect.left >= tooltipRect.width + 8;
+    const hasSpaceRight =
+      viewportWidth - wrapperRect.right >= tooltipRect.width + 8;
 
-      if (tooltipRect.top < 0) {
-        newPlacement = "bottom";
-      } else if (tooltipRect.bottom > viewportHeight) {
-        newPlacement = "top";
-      }
+    // Kiểm tra đặc biệt cho các vị trí góc - xét đến việc tooltip được canh theo mép
+    const hasSpaceTopLeft =
+      hasSpaceAbove && wrapperRect.left + tooltipRect.width <= viewportWidth;
+    const hasSpaceTopRight =
+      hasSpaceAbove && wrapperRect.right - tooltipRect.width >= 0;
+    const hasSpaceBottomLeft =
+      hasSpaceBelow && wrapperRect.left + tooltipRect.width <= viewportWidth;
+    const hasSpaceBottomRight =
+      hasSpaceBelow && wrapperRect.right - tooltipRect.width >= 0;
 
-      setControlInfo({
-        isOpen: true,
-        placement: newPlacement,
-      });
-    },
-    [controlInfo]
-  );
+    // Logic chuyển đổi vị trí
+    switch (placement) {
+      case "top-left":
+        if (hasSpaceTopLeft) return "top-left";
+        if (hasSpaceTopRight) return "top-right";
+        if (hasSpaceBottomLeft) return "bottom-left";
+        if (hasSpaceBottomRight) return "bottom-right";
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceLeft) return "left";
+        return "right";
+
+      case "top-right":
+        if (hasSpaceTopRight) return "top-right";
+        if (hasSpaceTopLeft) return "top-left";
+        if (hasSpaceBottomRight) return "bottom-right";
+        if (hasSpaceBottomLeft) return "bottom-left";
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceRight) return "right";
+        return "left";
+
+      case "bottom-left":
+        if (hasSpaceBottomLeft) return "bottom-left";
+        if (hasSpaceBottomRight) return "bottom-right";
+        if (hasSpaceTopLeft) return "top-left";
+        if (hasSpaceTopRight) return "top-right";
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceLeft) return "left";
+        return "right";
+
+      case "bottom-right":
+        if (hasSpaceBottomRight) return "bottom-right";
+        if (hasSpaceBottomLeft) return "bottom-left";
+        if (hasSpaceTopRight) return "top-right";
+        if (hasSpaceTopLeft) return "top-left";
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceRight) return "right";
+        return "left";
+
+      case "top":
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceLeft) return "left";
+        return "right";
+
+      case "bottom":
+        if (hasSpaceBelow) return "bottom";
+        if (hasSpaceAbove) return "top";
+        if (hasSpaceLeft) return "left";
+        return "right";
+
+      case "left":
+        if (hasSpaceLeft) return "left";
+        if (hasSpaceRight) return "right";
+        if (hasSpaceAbove) return "top";
+        return "bottom";
+
+      case "right":
+        if (hasSpaceRight) return "right";
+        if (hasSpaceLeft) return "left";
+        if (hasSpaceAbove) return "top";
+        return "bottom";
+
+      default:
+        return placement;
+    }
+  }, [placement]);
 
   const handleMouseEnter = useCallback(() => {
-    clearTimers();
+    clearAllTimers();
 
     mouseEnterTimer.current = setTimeout(() => {
-      requestAnimationFrame(() => {
-        if (tooltipRef.current) {
-          const tooltipRect = tooltipRef.current.getBoundingClientRect();
-          ensureVisibleInViewport(tooltipRect);
-        }
-      });
+      setControlInfo((prev) => ({ ...prev, isOpen: true }));
+
+      if (autoAdjustOverflow) {
+        requestAnimationFrame(() => {
+          if (tooltipRef.current) {
+            const tooltipRect = calculateOptimalPlacement();
+            setControlInfo({
+              isOpen: true,
+              placement: tooltipRect,
+            });
+          }
+        });
+      }
     }, mouseEnterDelay);
-  }, [mouseEnterDelay, ensureVisibleInViewport]);
+  }, [mouseEnterDelay]);
 
   const handleMouseLeave = useCallback(() => {
-    clearTimers();
+    clearAllTimers();
 
-    mouseLeaveTimerTimer.current = setTimeout(() => {
+    mouseLeaveTimer.current = setTimeout(() => {
       setControlInfo((prev) => ({
         ...prev,
         isOpen: false,
@@ -267,41 +404,41 @@ const Tooltip: React.FC<TooltipProps> = ({
     }, mouseLeaveDelay);
   }, [mouseLeaveDelay]);
 
-  const clearTimers = () => {
+  const clearAllTimers = () => {
     if (mouseEnterTimer.current) {
       clearTimeout(mouseEnterTimer.current);
       mouseEnterTimer.current = null;
     }
-    if (mouseLeaveTimerTimer.current) {
-      clearTimeout(mouseLeaveTimerTimer.current);
-      mouseLeaveTimerTimer.current = null;
+    if (mouseLeaveTimer.current) {
+      clearTimeout(mouseLeaveTimer.current);
+      mouseLeaveTimer.current = null;
     }
   };
 
-  const tooltipContent = useMemo(
-    () => (
-      <TooltipContent
-        ref={tooltipRef}
-        visible={controlInfo.isOpen}
-        placement={controlInfo.placement}
-        variant={variant}
-        zIndex={zIndex}
-        arrow={arrow}
-      >
-        {content}
-      </TooltipContent>
-    ),
-    [controlInfo, variant, zIndex, content]
+  const tooltipContent = () => (
+    <TooltipContent
+      ref={tooltipRef}
+      visible={isVisible}
+      placement={controlInfo.placement}
+      variant={variant}
+      zIndex={zIndex}
+      arrow={arrow}
+      onMouseEnter={isControlled ? undefined : handleMouseEnter}
+      onMouseLeave={isControlled ? undefined : handleMouseLeave}
+      contentStyles={contentStyles}
+      stayOpenOnHover={stayOpenOnHover}
+    >
+      {content}
+    </TooltipContent>
   );
-
   return (
     <TooltipWrapper
       ref={wrapperRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={isControlled ? undefined : handleMouseEnter}
+      onMouseLeave={isControlled ? undefined : handleMouseLeave}
     >
       {children}
-      {tooltipContent}
+      {tooltipContent()}
     </TooltipWrapper>
   );
 };
@@ -324,7 +461,12 @@ export const TooltipExample = () => {
     >
       {/* Basic tooltip */}
       <div style={{ marginBottom: "20px" }}>
-        <Tooltip content="Default tooltip with basic z-index" zIndex={1000}>
+        <Tooltip
+          content="Default tooltip with basic z-index"
+          zIndex={1000}
+          placement="top"
+          variant="accent"
+        >
           <Button>Hover Default</Button>
         </Tooltip>
       </div>
@@ -333,6 +475,7 @@ export const TooltipExample = () => {
           content="Default tooltip with basic z-index"
           zIndex={1000}
           placement="left"
+          variant="warning"
         >
           <Button>
             Hover left lllllllllllllllllllllllllllllllllllllllllllllll
