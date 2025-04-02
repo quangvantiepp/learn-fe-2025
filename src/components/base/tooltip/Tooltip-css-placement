@@ -1,0 +1,144 @@
+// Expanded placement types to include corners
+type TooltipPlacement = 
+  "top" | "bottom" | "left" | "right" | 
+  "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+// Modified getArrowStyles function to handle corner positions
+const getArrowStyles = (
+  placement: TooltipPlacement,
+  color: string,
+  arrow?: boolean
+) => {
+  if (!arrow) return;
+  switch (placement) {
+    case "top":
+      return `
+        &::after {
+          bottom: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          border-width: 8px 8px 0;
+          border-color: ${color} transparent transparent transparent;
+        }
+      `;
+    case "top-left":
+      return `
+        &::after {
+          bottom: -8px;
+          left: 16px;
+          border-width: 8px 8px 0;
+          border-color: ${color} transparent transparent transparent;
+        }
+      `;
+    case "top-right":
+      return `
+        &::after {
+          bottom: -8px;
+          right: 16px;
+          border-width: 8px 8px 0;
+          border-color: ${color} transparent transparent transparent;
+        }
+      `;
+    case "bottom":
+      return `
+        &::after {
+          top: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          border-width: 0 8px 8px;
+          border-color: transparent transparent ${color} transparent;
+        }
+      `;
+    case "bottom-left":
+      return `
+        &::after {
+          top: -8px;
+          left: 16px;
+          border-width: 0 8px 8px;
+          border-color: transparent transparent ${color} transparent;
+        }
+      `;
+    case "bottom-right":
+      return `
+        &::after {
+          top: -8px;
+          right: 16px;
+          border-width: 0 8px 8px;
+          border-color: transparent transparent ${color} transparent;
+        }
+      `;
+    case "left":
+      return `
+        &::after {
+          right: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          border-width: 8px 0 8px 8px;
+          border-color: transparent transparent transparent ${color};
+        }
+      `;
+    case "right":
+      return `
+        &::after {
+          left: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          border-width: 8px 8px 8px 0;
+          border-color: transparent ${color} transparent transparent;
+        }
+      `;
+  }
+};
+
+// Modify the updatePosition function to handle corner placements
+// Add this code to the updatePosition function where positions are calculated
+switch (bestPlacement) {
+  case 'top':
+    newPosition = {
+      left: wrapperRect.left + (wrapperRect.width / 2) - (tooltipRect.width / 2),
+      bottom: viewportHeight - wrapperRect.top + 8
+    };
+    break;
+  case 'top-left':
+    newPosition = {
+      left: wrapperRect.left,
+      bottom: viewportHeight - wrapperRect.top + 8
+    };
+    break;
+  case 'top-right':
+    newPosition = {
+      right: viewportWidth - wrapperRect.right,
+      bottom: viewportHeight - wrapperRect.top + 8
+    };
+    break;
+  case 'bottom':
+    newPosition = {
+      left: wrapperRect.left + (wrapperRect.width / 2) - (tooltipRect.width / 2),
+      top: wrapperRect.bottom + 8
+    };
+    break;
+  case 'bottom-left':
+    newPosition = {
+      left: wrapperRect.left,
+      top: wrapperRect.bottom + 8
+    };
+    break;
+  case 'bottom-right':
+    newPosition = {
+      right: viewportWidth - wrapperRect.right,
+      top: wrapperRect.bottom + 8
+    };
+    break;
+  case 'left':
+    newPosition = {
+      right: viewportWidth - wrapperRect.left + 8,
+      top: wrapperRect.top + (wrapperRect.height / 2) - (tooltipRect.height / 2)
+    };
+    break;
+  case 'right':
+    newPosition = {
+      left: wrapperRect.right + 8,
+      top: wrapperRect.top + (wrapperRect.height / 2) - (tooltipRect.height / 2)
+    };
+    break;
+}
