@@ -30,6 +30,10 @@ function App() {
       <Button onClick={handSubmit}>Submit</Button>
       {
         <>
+          <ImageViewerFull
+            images={[images1, images2, images3]}
+            displayMode="double"
+          />
           <UploadFiles
             multiple={true}
             accept="image/*, .zip"
@@ -42,7 +46,6 @@ function App() {
           <>Tooltip full</>
           {/* <TooltipExampleCustomFull></TooltipExampleCustomFull> */}
           <TooltipExample />
-          <ImageViewerFull images={[images1, images2, images3]} />
         </>
       }
     </>
