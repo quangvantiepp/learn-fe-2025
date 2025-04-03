@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import styled from "@emotion/styled";
+import ContextMenu, {
+  CanvasContext,
+  ContextMenuOption,
+  useContextMenu,
+} from "./context-menu";
 
 // Interfaces
 interface ImageViewerProps {
@@ -151,7 +156,7 @@ const NoImageSelectedMessage = styled.div`
   background-color: #f8f8f8;
 `;
 
-const ImageViewerFull: React.FC<ImageViewerProps> = ({
+const ImageViewerFull1: React.FC<ImageViewerProps> = ({
   images,
   displayMode = "double", // Default to double mode
 }) => {
@@ -178,6 +183,136 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({
 
   // Store viewportState in a ref to access current value in event handlers
   const viewportStateRef = useRef(viewportState);
+
+  ///////////////////// menu
+  // Sử dụng custom hook cho context menu
+  const {
+    contextMenuProps,
+    showContextMenu,
+    // hideContextMenu,
+    menuContext,
+  } = useContextMenu();
+
+  // Các hàm xử lý ảnh với kiểm tra an toàn
+  const applyGrayscale = () => {
+    // Kiểm tra an toàn
+    if (
+      !menuContext ||
+      !menuContext.canvasRef?.current ||
+      !menuContext.imageRef.current
+    )
+      return;
+
+    const canvas = menuContext.canvasRef?.current;
+    const image = menuContext.imageRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Vẽ lại ảnh gốc trước khi áp dụng hiệu ứng
+    drawImage(canvas, image);
+
+    // Áp dụng filter grayscale
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      data[i] = avg; // red
+      data[i + 1] = avg; // green
+      data[i + 2] = avg; // blue
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  };
+
+  const applyInvert = () => {
+    // Kiểm tra an toàn
+    if (
+      !menuContext ||
+      !menuContext.canvasRef?.current ||
+      !menuContext.imageRef.current
+    )
+      return;
+
+    const canvas = menuContext.canvasRef.current;
+    const image = menuContext.imageRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Vẽ lại ảnh gốc trước khi áp dụng hiệu ứng
+    drawImage(canvas, image);
+
+    // Áp dụng filter invert
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 255 - data[i]; // red
+      data[i + 1] = 255 - data[i + 1]; // green
+      data[i + 2] = 255 - data[i + 2]; // blue
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  };
+
+  const saveCanvasAsImage = () => {
+    // Kiểm tra an toàn
+    if (!menuContext || !menuContext.canvasRef?.current) return;
+
+    const canvas = menuContext.canvasRef.current;
+
+    try {
+      // Tạo URL từ nội dung canvas
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // Tạo link tải xuống
+      const link = document.createElement("a");
+      link.download = `image-${new Date().getTime()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Error saving image:", error);
+    }
+  };
+
+  // Định nghĩa các tùy chọn menu
+  const getContextMenuOptions = (): ContextMenuOption[] => [
+    {
+      label: "Chuyển thành đen trắng",
+      action: applyGrayscale,
+    },
+    {
+      label: "Đảo ngược màu sắc",
+      action: applyInvert,
+    },
+    {
+      label: "Xoay ảnh 90° phải",
+      action: () => {
+        setViewportState((prev) => ({
+          ...prev,
+          rotation: (prev.rotation + 90) % 360,
+        }));
+      },
+      divider: true, // Thêm đường kẻ sau mục này
+    },
+    {
+      label: "Lưu ảnh",
+      action: saveCanvasAsImage,
+    },
+  ];
+
+  // Hàm xử lý chuột phải cho canvas
+  const handleCanvasContextMenu = (
+    e: React.MouseEvent,
+    canvasRef: React.RefObject<HTMLCanvasElement | null>,
+    imageRef: React.RefObject<HTMLImageElement | null>
+  ) => {
+    // Truyền context với kiểu dữ liệu cụ thể
+    const context: CanvasContext = { canvasRef, imageRef };
+    showContextMenu(e, context);
+  };
+
+  ///////////////////// menu
 
   // Keep the ref updated with the latest state
   useEffect(() => {
@@ -549,6 +684,9 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onContextMenu={(e) =>
+                  handleCanvasContextMenu(e, leftCanvasRef, leftImageRef)
+                }
               >
                 <StyledCanvas ref={leftCanvasRef} width={500} height={400} />
               </CanvasContainer>
@@ -568,6 +706,9 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
+                  onContextMenu={(e) =>
+                    handleCanvasContextMenu(e, rightCanvasRef, rightImageRef)
+                  }
                 >
                   <StyledCanvas ref={rightCanvasRef} width={500} height={400} />
                 </CanvasContainer>
@@ -588,11 +729,13 @@ const ImageViewerFull: React.FC<ImageViewerProps> = ({
           Select an image from the list to view
         </NoImageSelectedMessage>
       )}
+
+      <ContextMenu {...contextMenuProps} options={getContextMenuOptions()} />
     </Container>
   );
 };
 
-export default ImageViewerFull;
+export default ImageViewerFull1;
 
 // Example usage:
 // Single mode: <ImageViewer images={['url1.jpg', 'url2.jpg']} displayMode="single" />
