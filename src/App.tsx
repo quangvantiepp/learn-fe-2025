@@ -9,6 +9,7 @@ import images1 from "../public/images1.jpg";
 import images2 from "../public/images2.jpg";
 import images3 from "../public/images3.jpg";
 import ImageViewerFull from "./components/base/image-viewer/image-viewer-full";
+import ImageViewerFull1 from "./components/base/image-viewer/image-viewer-use-context";
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
@@ -30,9 +31,9 @@ function App() {
       <Button onClick={handSubmit}>Submit</Button>
       {
         <>
-          <ImageViewerFull
+          <ImageViewerFull1
             images={[images1, images2, images3]}
-            displayMode="double"
+            displayMode="single"
           />
           <UploadFiles
             multiple={true}
@@ -40,10 +41,10 @@ function App() {
             maxSize={1024 * 1024 * 1}
             onFileChange={(files) => setFileList(files)}
           />
-          {/* <TooltipExample /> */}
-          <>Custom</>
+          <TooltipExample />
+          {/* <>Custom</> */}
           {/* <TooltipExampleCustom /> */}
-          <>Tooltip full</>
+          {/* <>Tooltip full</> */}
           {/* <TooltipExampleCustomFull></TooltipExampleCustomFull> */}
           <TooltipExample />
         </>
