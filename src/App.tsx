@@ -13,6 +13,7 @@ import ImageViewerFull1 from "./components/base/image-viewer/image-viewer-use-co
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
+  console.log("env:", import.meta.env.VITE_API_URL);
 
   const handSubmit = () => {
     axios
