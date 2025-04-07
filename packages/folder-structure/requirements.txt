@@ -1,0 +1,32 @@
+The folder structure request. can open/ close folder.
+can see that file is labeled or not (labeled = green, unlabeled=red).
+selected input in front of it. (we need redux to save selected file and folder).
+if you check folder, then select all in the folder unselect folder, then unselect all in the folder. Can select/unselect file.
+when you open the folder, fetch only 1 level of it (there is no API for it. so please use MSW for it).
+the pagination applies you maintain current, 2 previous page, 2 next page for UX. the number of pages can be changed(like 1 previous, 3 previous).
+you only render components on window (i used react-virtualized for this feature before. so please consider about this)
+when you loading the component, you should show loading components, this can be implemented using <Suspense /> or isLoading on react-query.
+I recommend you to use react loading skeleton for it.
+
+
+tôi muốn tạo một folder structure trên dự án front-end 
+dùng vite+pnpm+react-typeScript + @emotion/styled. 
+có các yêu cầu sau 
+: The folder structure request.
+can open/ close folder.
+can see that file is labeled or not (labeled = green, unlabeled=red). 
+selected input in front of it. 
+(we need redux to save selected file and folder). 
+if you check folder, then select all in the folder unselect folder, 
+then unselect all in the folder. Can select/unselect file. 
+when you open the folder, fetch only 1 
+level of it (there is no API for it. so please use MSW for it). 
+the pagination applies you maintain current, 2 previous page, 
+2 next page for UX. the number of pages can be 
+changed(like 1 previous, 3 previous). 
+you only render components on 
+window (i used react-virtualized for this feature before. 
+so please consider about this) when you loading the component, 
+you should show loading components, 
+this can be implemented using <Suspense /> or isLoading on react-query. 
+I recommend you to use react loading skeleton for it.
