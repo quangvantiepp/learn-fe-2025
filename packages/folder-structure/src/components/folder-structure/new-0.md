@@ -1,3 +1,4 @@
+```tsx
 // types
 // src/types.ts
 export interface FileType {
@@ -396,3 +397,4 @@ export const Folder: React.FC<FolderProps> = ({ folder, level }) => {
   );
 };
 
+```

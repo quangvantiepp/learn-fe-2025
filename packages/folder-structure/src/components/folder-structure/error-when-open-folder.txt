@@ -1,0 +1,15 @@
+Vấn đề chính là do cách xử lý quá trình chuyển đổi giữa trạng thái loading và hiển thị nội dung thực tế trong component Folder. Cụ thể:
+
+Vấn đề về thời gian: Khi folder được mở ra, skeleton loading được hiển thị ngay lập tức. Sau khi dữ liệu được tải xong, component cố gắng hiển thị nội dung thực nhưng không có sự chuyển đổi trạng thái rõ ràng - dẫn đến cả skeleton và nội dung thực đều tồn tại đồng thời trong DOM.
+Vấn đề về đo lường chiều cao: Thư viện react-virtualized sử dụng CellMeasurer để tính toán chiều cao động của mỗi hàng. Tuy nhiên, khi skeleton vẫn còn trong DOM, việc đo lường này trở nên không chính xác, gây ra việc các phần tử bị chồng lên nhau.
+Vấn đề về cập nhật DOM: React không xóa skeleton loading trước khi thêm nội dung thực - thay vào đó nó cố gắng cập nhật cả hai cùng một lúc, dẫn đến xung đột trong việc xác định vị trí.
+Vấn đề về cache: Cache của CellMeasurer giữ lại các phép đo của các phần tử cũ, điều này có thể gây nhầm lẫn khi chuyển đổi giữa skeleton và nội dung thực.
+
+Giải pháp chính trong code đã sửa:
+
+Tách biệt rõ ràng các trạng thái: Sử dụng state showSkeleton để đảm bảo chỉ hiển thị HOẶC skeleton HOẶC nội dung thực, không bao giờ cả hai.
+Tạo key động để buộc remount: Sử dụng renderKey để buộc React tạo lại toàn bộ component mỗi khi nội dung được tải xong.
+Sử dụng timeout: Đưa vào một khoảng thời gian nhỏ để đảm bảo DOM đã cập nhật hoàn toàn trước khi chuyển đổi trạng thái hiển thị.
+Đơn giản hóa rendering: Loại bỏ các phức tạp không cần thiết của react-virtualized để tránh các vấn đề về đo lường và cache.
+
+Với những thay đổi này, quá trình chuyển đổi giữa skeleton loading và nội dung thực trở nên rõ ràng và sạch sẽ, giúp tránh được hiện tượng chồng lấp nhau trên giao diện.
