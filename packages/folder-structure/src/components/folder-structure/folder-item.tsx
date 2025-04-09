@@ -10,9 +10,9 @@ interface FolderItemProps {
 }
 
 export const FolderItem: React.FC<FolderItemProps> = ({ item, level }) => {
-  if (item.type === "file") {
-    return <File file={item} level={level} />;
-  } else {
+  if (item.type === "folder") {
     return <Folder folder={item} level={level} />;
+  } else {
+    return <File file={item} level={level} />;
   }
 };

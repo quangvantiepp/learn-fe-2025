@@ -1,12 +1,5 @@
-// src/components/FolderStructure/Folder.tsx
-import React, { Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  List,
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-} from "react-virtualized";
 import styled from "@emotion/styled";
 import { useQuery } from "@tanstack/react-query";
 import Skeleton from "react-loading-skeleton";
@@ -19,7 +12,7 @@ import {
 import { RootState } from "../../store";
 import { fetchFolderContents } from "../../services/api";
 import { FolderItem } from "./folder-item";
-import { FolderType } from "../../types";
+import { FolderType, FolderItemType } from "../../types";
 
 const FolderContainer = styled.div<{ isSelected: boolean }>`
   display: flex;
@@ -47,14 +40,6 @@ interface FolderProps {
   level: number;
 }
 
-// Interface for rowRenderer
-interface RowRendererProps {
-  index: number;
-  key: string;
-  parent: any;
-  style: React.CSSProperties;
-}
-
 export const Folder: React.FC<FolderProps> = ({ folder, level }) => {
   const dispatch = useDispatch();
   const { openFolders, selectedItems, currentPage, itemsPerPage } = useSelector(
@@ -64,18 +49,40 @@ export const Folder: React.FC<FolderProps> = ({ folder, level }) => {
   const isOpen = openFolders.includes(folder.id);
   const isSelected = selectedItems.includes(folder.id);
 
-  // Cache for dynamic height measurements
-  const cache = new CellMeasurerCache({
-    fixedWidth: true,
-    defaultHeight: 50,
-  });
+  // State to manage the transition between loading and showing content
+  const [renderKey, setRenderKey] = useState(
+    `folder-${folder.id}-${Date.now()}`
+  );
+  const [showSkeleton, setShowSkeleton] = useState(true);
 
   // Fetch content only when folder is open
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ["folderContents", folder.id, currentPage],
     queryFn: () => fetchFolderContents(folder.id, currentPage, itemsPerPage),
-    enabled: isOpen, // Only fetch when folder is open
+    enabled: isOpen,
   });
+
+  // Handle folder open/close and loading states
+  useEffect(() => {
+    if (!isOpen) {
+      setShowSkeleton(true);
+    } else if (isOpen && !isLoading && !isFetching && data) {
+      // Use a timeout to ensure we don't have both loading and content showing at once
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+        // Generate a new render key to force remount of child components
+        setRenderKey(`folder-${folder.id}-${Date.now()}`);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isLoading, isFetching, data, folder.id]);
+
+  // Reset skeleton state when folder is toggled
+  useEffect(() => {
+    if (isOpen) {
+      setShowSkeleton(true);
+    }
+  }, [isOpen]);
 
   const handleToggleFolder = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,37 +93,13 @@ export const Folder: React.FC<FolderProps> = ({ folder, level }) => {
     e.stopPropagation();
     dispatch(toggleSelectItem(folder.id));
 
-    // If we have data and the folder is checked, select all children
     if (data && e.target.checked) {
       const childIds = data.items.map((item) => item.id);
       dispatch(selectAllInFolder(childIds));
-    }
-    // If we have data and the folder is unchecked, unselect all children
-    else if (data && !e.target.checked) {
+    } else if (data && !e.target.checked) {
       const childIds = data.items.map((item) => item.id);
       dispatch(unselectAllInFolder(childIds));
     }
-  };
-
-  const rowRenderer = ({ index, key, parent, style }: RowRendererProps) => {
-    return (
-      <CellMeasurer
-        cache={cache}
-        columnIndex={0}
-        key={key}
-        parent={parent}
-        rowIndex={index}
-      >
-        {({ measure, registerChild }) => (
-          <div style={style} ref={registerChild as any} onLoad={measure}>
-            <FolderItem
-              item={data?.items[index] as FolderType}
-              level={level + 1}
-            />
-          </div>
-        )}
-      </CellMeasurer>
-    );
   };
 
   return (
@@ -139,31 +122,17 @@ export const Folder: React.FC<FolderProps> = ({ folder, level }) => {
 
       {isOpen && (
         <FolderChildren>
-          <Suspense fallback={<Skeleton count={3} height={30} />}>
-            {isLoading ? (
-              <Skeleton count={3} height={30} />
-            ) : (
-              <div
-                style={{
-                  height: Math.min(300, (data?.items.length || 1) * 50),
-                }}
-              >
-                <AutoSizer disableHeight>
-                  {({ width }) => (
-                    <List
-                      width={width}
-                      height={Math.min(300, (data?.items.length || 1) * 50)}
-                      deferredMeasurementCache={cache}
-                      rowCount={data?.items.length || 0}
-                      rowHeight={cache.rowHeight}
-                      rowRenderer={rowRenderer}
-                      overscanRowCount={3}
-                    />
-                  )}
-                </AutoSizer>
-              </div>
-            )}
-          </Suspense>
+          {showSkeleton || isLoading || isFetching ? (
+            <Skeleton count={3} height={30} />
+          ) : data?.items && data.items.length > 0 ? (
+            <div key={renderKey}>
+              {data.items.map((item: FolderItemType) => (
+                <FolderItem key={item.id} item={item} level={level + 1} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ padding: "10px 0" }}>This folder is empty</div>
+          )}
         </FolderChildren>
       )}
     </>

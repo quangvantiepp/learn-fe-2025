@@ -29,7 +29,7 @@ export const folderData = [
     hasChildren: true,
     children: [
       ...generateFiles('root', 5),
-      ...generateFolders('root', 3)
+      ...generateFolders('root', 1000)
     ]
   },
   {
@@ -38,8 +38,8 @@ export const folderData = [
     type: 'folder' as const,
     hasChildren: true,
     children: [
+      ...generateFolders('root-folder-0', 1000),
       ...generateFiles('root-folder-0', 10),
-      ...generateFolders('root-folder-0', 2)
     ]
   },
   {
@@ -67,7 +67,16 @@ export const folderData = [
     type: 'folder' as const,
     hasChildren: true,
     children: [
-      ...generateFiles('root-folder-0-folder-0', 8),
+      ...generateFolders('root-folder-0-folder-0', 8),
+    ]
+  },
+  {
+    id: 'root-folder-0-folder-0-folder-0',
+    name: 'Subfolder 0-0-0',
+    type: 'folder' as const,
+    hasChildren: true,
+    children: [
+      ...generateFiles('root-folder-0-folder-0-folder-0', 8),
     ]
   },
   {
