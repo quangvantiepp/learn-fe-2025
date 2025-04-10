@@ -11,6 +11,8 @@ import images3 from "../public/images3.jpg";
 import ImageViewerFull from "./components/base/image-viewer/image-viewer-full";
 import ImageViewerFull1 from "./components/base/image-viewer/image-viewer-use-context";
 import NotFoundPage from "./components/base/page-not-found-404/page-not-found";
+import { ToastProvider, ToastViewport } from "./components/base/toast";
+import { ToastButton } from "./components/base/toast/toast-button";
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
@@ -50,6 +52,10 @@ function App() {
           {/* <TooltipExampleCustomFull></TooltipExampleCustomFull> */}
           {/* <TooltipExample /> */}
           <NotFoundPage />
+          <ToastProvider>
+            <ToastButton />
+            <ToastViewport position="top-right" />
+          </ToastProvider>
         </>
       }
     </>
