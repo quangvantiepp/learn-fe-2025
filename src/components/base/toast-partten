@@ -1,0 +1,191 @@
+// ui-pattern/toast/useToast.tsx
+import React, { createContext, useContext, useState, useRef, useImperativeHandle, forwardRef } from 'react';
+import { ToastProvider, Toast, ToastViewportComponent, ToastPosition } from '../../ui-toolkit/Toast/Toast';
+
+// Types
+type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'info';
+
+interface ToastOptions {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  duration?: number;
+  variant?: ToastVariant;
+  position?: ToastPosition;
+  onOpenChange?: (open: boolean) => void;
+}
+
+interface ToastProviderProps {
+  children: React.ReactNode;
+  defaultPosition?: ToastPosition;
+}
+
+// Ref exposed methods
+export interface ToastRef {
+  show: (options: ToastOptions) => string;
+  dismiss: (id: string) => void;
+  dismissAll: () => void;
+  updatePosition: (position: ToastPosition) => void;
+}
+
+interface ToastContextValue {
+  toast: (options: ToastOptions) => string;
+  dismiss: (id: string) => void;
+  dismissAll: () => void;
+  updatePosition: (position: ToastPosition) => void;
+  toastRef: React.RefObject<ToastRef>;
+}
+
+// Create context
+const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+
+// Toast item type
+interface ToastItem extends ToastOptions {
+  id: string;
+  open: boolean;
+}
+
+// Provider component with ref
+export const ToastContextProvider = forwardRef<ToastRef, ToastProviderProps>(
+  ({ children, defaultPosition = 'bottom-right' }, ref) => {
+    const [toasts, setToasts] = useState<ToastItem[]>([]);
+    const [position, setPosition] = useState<ToastPosition>(defaultPosition);
+    
+    const internalRef = useRef<ToastRef>({
+      show: () => '',
+      dismiss: () => {},
+      dismissAll: () => {},
+      updatePosition: () => {},
+    });
+
+    const toast = (options: ToastOptions): string => {
+      const id = Math.random().toString(36).substring(2, 9);
+      setToasts((prevToasts) => [
+        ...prevToasts,
+        {
+          id,
+          open: true,
+          position: options.position || position,
+          ...options,
+        },
+      ]);
+      return id;
+    };
+
+    const dismiss = (id: string): void => {
+      setToasts((prevToasts) =>
+        prevToasts.map((toast) =>
+          toast.id === id ? { ...toast, open: false } : toast
+        )
+      );
+
+      // Remove from state after animation completes
+      setTimeout(() => {
+        setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+      }, 300);
+    };
+
+    const dismissAll = (): void => {
+      setToasts((prevToasts) =>
+        prevToasts.map((toast) => ({ ...toast, open: false }))
+      );
+
+      // Remove all from state after animation completes
+      setTimeout(() => {
+        setToasts([]);
+      }, 300);
+    };
+
+    const updatePosition = (newPosition: ToastPosition): void => {
+      setPosition(newPosition);
+    };
+
+    const handleOpenChange = (id: string, open: boolean): void => {
+      if (!open) {
+        setToasts((prevToasts) =>
+          prevToasts.map((toast) =>
+            toast.id === id ? { ...toast, open } : toast
+          )
+        );
+        
+        // Remove from state after animation completes
+        setTimeout(() => {
+          setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+        }, 300);
+      }
+    };
+
+    // Expose methods via ref
+    useImperativeHandle(ref, () => ({
+      show: toast,
+      dismiss,
+      dismissAll,
+      updatePosition,
+    }));
+
+    // Update internal ref
+    internalRef.current = {
+      show: toast,
+      dismiss,
+      dismissAll,
+      updatePosition,
+    };
+
+    // Group toasts by position
+    const toastsByPosition: Record<ToastPosition, ToastItem[]> = {
+      'top-left': [],
+      'top-center': [],
+      'top-right': [],
+      'bottom-left': [],
+      'bottom-center': [],
+      'bottom-right': [],
+    };
+
+    toasts.forEach(toast => {
+      const toastPosition = toast.position || position;
+      toastsByPosition[toastPosition].push(toast);
+    });
+
+    return (
+      <ToastContext.Provider value={{ toast, dismiss, dismissAll, updatePosition, toastRef: internalRef }}>
+        <ToastProvider>
+          {children}
+          
+          {/* Render viewport and toasts for each position */}
+          {(Object.keys(toastsByPosition) as ToastPosition[]).map(pos => 
+            toastsByPosition[pos].length > 0 ? (
+              <React.Fragment key={pos}>
+                {toastsByPosition[pos].map((toast) => (
+                  <Toast
+                    key={toast.id}
+                    open={toast.open}
+                    onOpenChange={(open) => {
+                      handleOpenChange(toast.id, open);
+                      toast.onOpenChange?.(open);
+                    }}
+                    title={toast.title}
+                    description={toast.description}
+                    action={toast.action}
+                    duration={toast.duration}
+                    variant={toast.variant}
+                    position={pos}
+                  />
+                ))}
+                <ToastViewportComponent position={pos} />
+              </React.Fragment>
+            ) : null
+          )}
+        </ToastProvider>
+      </ToastContext.Provider>
+    );
+  }
+);
+
+// Hook for consuming the toast context
+export const useToast = (): ToastContextValue => {
+  const context = useContext(ToastContext);
+  if (context === undefined) {
+    throw new Error('useToast must be used within a ToastContextProvider');
+  }
+  return context;
+};
