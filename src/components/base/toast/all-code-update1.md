@@ -1,7 +1,7 @@
-// types.ts - Thêm DisplayMode
+// types.ts - Loại bỏ chế độ stacked
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
-export type ToastDisplayMode = 'default' | 'single' | 'stacked';
+export type ToastDisplayMode = 'default' | 'single';
 
 export interface ToastAction {
   label: string;
@@ -20,9 +20,11 @@ export interface Toast {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   pauseOnHover?: boolean;
+  // Thêm trạng thái cho việc đóng mượt mà
+  removing?: boolean;
 }
 
-// toast-context.tsx - Cập nhật context để thêm displayMode
+// toast-context.tsx - Cập nhật context
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Toast, ToastType, ToastAction, ToastDisplayMode } from './types';
 
@@ -30,7 +32,7 @@ interface ToastContextValue {
   toasts: Toast[];
   displayMode: ToastDisplayMode;
   setDisplayMode: (mode: ToastDisplayMode) => void;
-  addToast: (toast: Omit<Toast, 'id'>) => string;
+  addToast: (toast: Omit<Toast, 'id' | 'removing'>) => string;
   removeToast: (id: string) => void;
   updateToast: (id: string, toast: Partial<Omit<Toast, 'id'>>) => void;
   setToastOpen: (id: string, open: boolean) => void;
@@ -58,29 +60,49 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [displayMode, setDisplayMode] = useState<ToastDisplayMode>(defaultDisplayMode);
 
+  // Cải thiện quá trình xóa toast để đảm bảo animation mượt mà
   const removeToast = useCallback((id: string) => {
+    // Đánh dấu toast đang được xóa trước
     setToasts((prevToasts) => {
-      const toast = prevToasts.find(t => t.id === id);
-      if (toast?.onClose) {
-        toast.onClose();
-      }
-      return prevToasts.filter((toast) => toast.id !== id);
+      return prevToasts.map(toast => 
+        toast.id === id ? { ...toast, removing: true } : toast
+      );
     });
+
+    // Sau khi animation kết thúc, thực sự xóa toast khỏi state
+    setTimeout(() => {
+      setToasts((prevToasts) => {
+        const toast = prevToasts.find(t => t.id === id);
+        if (toast?.onClose) {
+          toast.onClose();
+        }
+        return prevToasts.filter((toast) => toast.id !== id);
+      });
+    }, 300); // Đảm bảo thời gian này phải khớp với thời gian animation
   }, []);
 
-  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
+  const addToast = useCallback((toast: Omit<Toast, 'id' | 'removing'>) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newToast: Toast = { 
       ...toast, 
       id, 
       open: toast.open !== undefined ? toast.open : true,
-      pauseOnHover: toast.pauseOnHover !== undefined ? toast.pauseOnHover : true
+      pauseOnHover: toast.pauseOnHover !== undefined ? toast.pauseOnHover : true,
+      removing: false
     };
     
     setToasts((prevToasts) => {
       // Nếu trong chế độ 'single', xóa tất cả toast cũ
       if (displayMode === 'single') {
-        return [newToast];
+        // Đánh dấu tất cả toast hiện tại là đang xóa
+        const markedToasts = prevToasts.map(t => ({ ...t, removing: true }));
+        
+        // Sau khi animation hoàn tất, thực sự xóa các toast cũ
+        setTimeout(() => {
+          setToasts([newToast]);
+        }, 300);
+        
+        return [...markedToasts, newToast];
       }
       return [...prevToasts, newToast];
     });
@@ -106,10 +128,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
     );
 
     if (!open) {
-      // Allow time for animation before removing
-      setTimeout(() => {
-        removeToast(id);
-      }, 300);
+      removeToast(id);
     }
   }, [removeToast]);
 
@@ -130,7 +149,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
   );
 };
 
-// toast-viewport.tsx - Cập nhật để hỗ trợ display modes
+// toast-viewport.tsx - Cập nhật viewport
 import React from 'react';
 import styled from '@emotion/styled';
 import { ToastItem } from './toast-item';
@@ -153,7 +172,7 @@ const ViewportContainer = styled.div<ViewportContainerProps>`
   flex-direction: column;
   max-height: 100vh;
   padding: 16px;
-  gap: ${props => props.displayMode === 'stacked' ? '4px' : '8px'};
+  gap: 8px;
   pointer-events: none;
   
   & > * {
@@ -210,43 +229,32 @@ const ViewportContainer = styled.div<ViewportContainerProps>`
 export const ToastViewport: React.FC<ToastViewportProps> = ({ position = 'top-right' }) => {
   const { toasts, removeToast, setToastOpen, displayMode } = useToast();
 
-  // Khi ở chế độ stacked, chỉ hiển thị một phần của toast cũ
-  const visibleToasts = displayMode === 'single' 
-    ? toasts.slice(-1) // Chỉ toast mới nhất
-    : toasts;
-
   return (
     <ViewportContainer position={position} displayMode={displayMode}>
-      {visibleToasts.map((toast, index) => (
+      {toasts.map((toast) => (
         <ToastItem 
           key={toast.id} 
           toast={toast} 
           onRemove={removeToast} 
           setOpen={setToastOpen}
           position={position}
-          displayMode={displayMode}
-          index={index}
-          totalToasts={visibleToasts.length}
         />
       ))}
     </ViewportContainer>
   );
 };
 
-// toast-item.tsx - Cập nhật để hỗ trợ stacked mode
+// toast-item.tsx - Cập nhật toast item
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled from '@emotion/styled';
 import { keyframes } from '@emotion/react';
-import { Toast, ToastType, ToastPosition, ToastAction, ToastDisplayMode } from './types';
+import { Toast, ToastType, ToastPosition, ToastAction } from './types';
 
 interface ToastItemProps {
   toast: Toast;
   onRemove: (id: string) => void;
   setOpen: (id: string, open: boolean) => void;
   position: ToastPosition;
-  displayMode: ToastDisplayMode;
-  index: number;
-  totalToasts: number;
 }
 
 const getSlideAnimation = (position: ToastPosition) => {
@@ -254,67 +262,67 @@ const getSlideAnimation = (position: ToastPosition) => {
     case 'top-left':
       return {
         in: keyframes`
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
+          from { transform: translateX(-100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateX(0); }
-          to { transform: translateX(-100%); }
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(-100%); opacity: 0; }
         `
       };
     case 'top-center':
       return {
         in: keyframes`
-          from { transform: translateY(-100%); }
-          to { transform: translateY(0); }
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateY(0); }
-          to { transform: translateY(-100%); }
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(-100%); opacity: 0; }
         `
       };
     case 'bottom-left':
       return {
         in: keyframes`
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
+          from { transform: translateX(-100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateX(0); }
-          to { transform: translateX(-100%); }
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(-100%); opacity: 0; }
         `
       };
     case 'bottom-right':
       return {
         in: keyframes`
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateX(0); }
-          to { transform: translateX(100%); }
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
         `
       };
     case 'bottom-center':
       return {
         in: keyframes`
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateY(0); }
-          to { transform: translateY(100%); }
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(100%); opacity: 0; }
         `
       };
     default: // top-right
       return {
         in: keyframes`
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
         `,
         out: keyframes`
-          from { transform: translateX(0); }
-          to { transform: translateX(100%); }
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
         `
       };
   }
@@ -322,13 +330,9 @@ const getSlideAnimation = (position: ToastPosition) => {
 
 interface ToastContainerProps {
   type: ToastType; 
-  closing: boolean; 
+  removing: boolean; 
   position: ToastPosition;
   open: boolean;
-  displayMode: ToastDisplayMode;
-  index: number;
-  totalToasts: number;
-  isNewest: boolean;
 }
 
 const ToastContainer = styled.div<ToastContainerProps>`
@@ -337,25 +341,18 @@ const ToastContainer = styled.div<ToastContainerProps>`
   flex-direction: column;
   width: 360px;
   padding: 16px;
-  margin-bottom: ${props => props.displayMode === 'stacked' && !props.isNewest ? '0' : '8px'};
+  margin-bottom: 8px;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  opacity: ${props => (props.open ? 1 : 0)};
   
-  ${props => props.displayMode === 'stacked' && !props.isNewest ? `
-    position: absolute;
-    z-index: ${1000 - props.index};
-    ${getStackedPositioning(props.index, props.totalToasts, props.position)}
-    width: 340px;
-    height: 20px;
-    overflow: hidden;
-    padding: 8px 16px;
-  ` : ''}
-  
+  /* Các luật về animation */
   animation: ${props => {
     const animations = getSlideAnimation(props.position);
-    return props.closing ? animations.out : animations.in;
+    return props.removing ? animations.out : animations.in;
   }} 0.3s ease-out forwards;
+  
+  /* Thêm transition cho việc di chuyển mượt mà */
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
 
   ${props => {
     switch (props.type) {
@@ -382,18 +379,6 @@ const ToastContainer = styled.div<ToastContainerProps>`
     }
   }}
 `;
-
-// Helper để tính toán vị trí cho chế độ stacked
-const getStackedPositioning = (index: number, total: number, position: ToastPosition) => {
-  const isBottom = position.startsWith('bottom');
-  const offset = (index) * 10; // Mỗi toast phía sau lùi 10px
-  
-  if (isBottom) {
-    return `bottom: ${offset}px;`;
-  } else {
-    return `top: ${offset}px;`;
-  }
-};
 
 const ToastHeader = styled.div`
   display: flex;
@@ -514,40 +499,23 @@ const ActionButton = styled.button<{ variant?: 'default' | 'primary' | 'secondar
   }}
 `;
 
-// Component mới để hiển thị số lượng toast trong stacked mode
-const StackedCounter = styled.div`
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
-  font-weight: bold;
-  color: #555;
-`;
-
 export const ToastItem: React.FC<ToastItemProps> = ({ 
   toast, 
   onRemove, 
   setOpen, 
-  position, 
-  displayMode,
-  index,
-  totalToasts
+  position
 }) => {
-  const [closing, setClosing] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const duration = toast.duration || 5000;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const remainingTimeRef = useRef(duration);
   const startTimeRef = useRef<number | null>(null);
-  const isNewest = index === totalToasts - 1;
 
   const handleClose = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    setClosing(true);
     setOpen(toast.id, false);
   }, [toast.id, setOpen]);
 
@@ -576,17 +544,14 @@ export const ToastItem: React.FC<ToastItemProps> = ({
     }
   }, [toast.pauseOnHover, isPaused, duration, handleClose]);
 
-  // Chỉ toast mới nhất mới tự động đóng (cho chế độ stacked)
-  const shouldAutoClose = displayMode !== 'stacked' || isNewest;
-
   useEffect(() => {
     if (!toast.open) {
       handleClose();
       return;
     }
     
-    // Start timer for auto-dismissal (if newest toast in stacked mode or any toast in other modes)
-    if (shouldAutoClose && duration !== Infinity && !isPaused) {
+    // Start timer for auto-dismissal
+    if (duration !== Infinity && !isPaused && !toast.removing) {
       startTimeRef.current = Date.now();
       remainingTimeRef.current = duration;
       timerRef.current = setTimeout(handleClose, duration);
@@ -597,43 +562,16 @@ export const ToastItem: React.FC<ToastItemProps> = ({
         clearTimeout(timerRef.current);
       }
     };
-  }, [duration, handleClose, isPaused, toast.open, shouldAutoClose]);
-
-  // Khi ở chế độ stacked và không phải toast mới nhất
-  if (displayMode === 'stacked' && !isNewest) {
-    return (
-      <ToastContainer 
-        type={toast.type} 
-        closing={closing} 
-        position={position}
-        open={toast.open !== false}
-        displayMode={displayMode}
-        index={index}
-        totalToasts={totalToasts}
-        isNewest={isNewest}
-      >
-        <ToastContent>
-          {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
-        </ToastContent>
-        {index === 0 && totalToasts > 2 && (
-          <StackedCounter>+{totalToasts - 1}</StackedCounter>
-        )}
-      </ToastContainer>
-    );
-  }
+  }, [duration, handleClose, isPaused, toast.open, toast.removing]);
 
   return (
     <ToastContainer 
       type={toast.type} 
-      closing={closing} 
+      removing={toast.removing || false}
       position={position}
       open={toast.open !== false}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      displayMode={displayMode}
-      index={index}
-      totalToasts={totalToasts}
-      isNewest={isNewest}
     >
       <ToastHeader>
         <ToastContent>
@@ -662,14 +600,14 @@ export const ToastItem: React.FC<ToastItemProps> = ({
         </ActionsContainer>
       )}
       
-      {duration !== Infinity && (
+      {duration !== Infinity && !toast.removing && (
         <ProgressBar duration={duration} isPaused={isPaused} />
       )}
     </ToastContainer>
   );
 };
 
-// Cập nhật usage-example.tsx để thêm chế độ hiển thị
+// Cập nhật usage-example.tsx để bỏ chế độ stacked
 import React, { useState } from 'react';
 import { 
   ToastProvider, 
@@ -733,6 +671,21 @@ const ToastControls: React.FC = () => {
     }, 8000);
   };
 
+  // Thử tạo nhiều toast để kiểm tra animation mượt mà
+  const createMultipleToasts = () => {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        addToast({
+          title: `Toast #${i + 1}`,
+          description: `This is toast number ${i + 1} in the sequence`,
+          type: i % 2 === 0 ? 'info' : 'success',
+          duration: 5000 + i * 500, // Các toast sẽ đóng gần nhau
+          pauseOnHover: true,
+        });
+      }, i * 200); // Tạo các toast cách nhau 200ms
+    }
+  };
+
   return (
     <div style={{ margin: '20px' }}>
       <div style={{ marginBottom: '20px' }}>
@@ -765,7 +718,6 @@ const ToastControls: React.FC = () => {
             >
               <option value="default">Default (Show All)</option>
               <option value="single">Single (Only Newest)</option>
-              <option value="stacked">Stacked</option>
             </select>
           </div>
         </div>
@@ -781,6 +733,7 @@ const ToastControls: React.FC = () => {
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button onClick={() => showToastWithActions('info')}>Toast With Actions</button>
         <button onClick={showControlledToast}>Controlled Toast</button>
+        <button onClick={createMultipleToasts}>Create 5 Toasts</button>
       </div>
 
       <ToastViewport position={position} />
