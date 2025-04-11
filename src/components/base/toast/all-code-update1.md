@@ -750,3 +750,64 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+// edit toast
+// Sửa hàm addToast trong toast-context.tsx
+const addToast = useCallback((toast: Omit<Toast, 'id' | 'removing'>) => {
+  const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const newToast: Toast = { 
+    ...toast, 
+    id, 
+    open: toast.open !== undefined ? toast.open : true,
+    pauseOnHover: toast.pauseOnHover !== undefined ? toast.pauseOnHover : true,
+    removing: false
+  };
+  
+  setToasts((prevToasts) => {
+    // Nếu trong chế độ 'single', chỉ hiển thị toast mới nhất
+    if (displayMode === 'single') {
+      // Đánh dấu tất cả toast hiện tại là đang xóa
+      const markedToasts = prevToasts.map(t => ({ ...t, removing: true }));
+      
+      // Thêm toast mới
+      const updatedToasts = [...markedToasts, newToast];
+      
+      // Xóa các toast cũ sau khi animation hoàn tất
+      prevToasts.forEach(oldToast => {
+        setTimeout(() => {
+          setToasts(current => current.filter(t => 
+            t.id === newToast.id || t.id !== oldToast.id
+          ));
+        }, 300);
+      });
+      
+      return updatedToasts;
+    }
+    
+    // Chế độ default - thêm toast mới vào danh sách
+    return [...prevToasts, newToast];
+  });
+  
+  return id;
+}, [displayMode]);
+
+// Cập nhật removeToast để xử lý tốt hơn trong cả hai chế độ
+const removeToast = useCallback((id: string) => {
+  // Đánh dấu toast đang được xóa trước
+  setToasts((prevToasts) => {
+    return prevToasts.map(toast => 
+      toast.id === id ? { ...toast, removing: true } : toast
+    );
+  });
+
+  // Sau khi animation kết thúc, thực sự xóa toast khỏi state
+  setTimeout(() => {
+    setToasts((prevToasts) => {
+      const toast = prevToasts.find(t => t.id === id);
+      if (toast?.onClose) {
+        toast.onClose();
+      }
+      return prevToasts.filter((toast) => toast.id !== id);
+    });
+  }, 300); // Đảm bảo thời gian này phải khớp với thời gian animation
+}, []);
