@@ -11,9 +11,9 @@ const ButtonStyled = styled.button<ButtonProps>`
   font-size: 16px;
 `;
 
-const Button = ({ disabled, onClick, children }: ButtonProps) => {
+const Button = ({ disabled, onClick, children, ...props }: ButtonProps) => {
   return (
-    <ButtonStyled disabled={disabled} onClick={onClick}>
+    <ButtonStyled disabled={disabled} onClick={onClick} {...props}>
       {children}
     </ButtonStyled>
   );
