@@ -79,8 +79,9 @@ export default defineConfig({
 })
 - when have error pnpm add -D jsdom
 
-
-
+## introduce this project
+- this project is using react + typeScript + pnpm + vite + storybook + vite unit test + mock api
+- canvas + fabric 
 ## run project
 
 ### install and run

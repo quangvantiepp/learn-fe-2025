@@ -3,8 +3,7 @@ import { useState } from "react";
 import "./App.css";
 import Button from "./components/ui/button/Button";
 
-import { ToastProvider } from "./components/base/toast-radix-ui.tsx/model-ui-toolkit/toast-provider";
-import { MainContent } from "./components/base/toast-radix-ui.tsx/use-example";
+import CustomResizableRect from "./components/canvas/test-canvas/rect-resize";
 
 function App() {
   const [fileList, setFileList] = useState<File[]>([]);
@@ -27,9 +26,13 @@ function App() {
       <Button onClick={handSubmit}>Submit</Button>
       {
         <>
-          <ToastProvider>
+          {/* <ToastProvider>
             <MainContent />
-          </ToastProvider>
+          </ToastProvider> */}
+          {/* <AppImageViewer /> */}
+          {/* <FabricCanvas />
+           */}
+          <CustomResizableRect />
         </>
       }
     </>
