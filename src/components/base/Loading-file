@@ -200,3 +200,232 @@ const App: React.FC = () => {
 };
 
 export default App;
+////////////// component
+import React from 'react';
+import styled from '@emotion/styled';
+import { keyframes } from '@emotion/react';
+
+// Định nghĩa animation
+const spin = keyframes`
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+`;
+
+const pulse = keyframes`
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+`;
+
+const bounce = keyframes`
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+`;
+
+// Styled components
+const LoadingContainer = styled.div<{ 
+  position: 'absolute' | 'relative';
+  top?: string;
+  right?: string;
+  left?: string;
+  bottom?: string;
+}>`
+  position: ${props => props.position};
+  top: ${props => props.top || 'auto'};
+  right: ${props => props.right || 'auto'};
+  left: ${props => props.left || 'auto'};
+  bottom: ${props => props.bottom || 'auto'};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const SpinnerCircle = styled.div<{ size: number; color: string }>`
+  width: ${props => props.size}px;
+  height: ${props => props.size}px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid ${props => props.color};
+  border-radius: 50%;
+  animation: ${spin} 1s linear infinite;
+`;
+
+const DotsContainer = styled.div`
+  display: flex;
+  gap: 4px;
+`;
+
+const Dot = styled.div<{ color: string; delay: number }>`
+  width: 8px;
+  height: 8px;
+  background-color: ${props => props.color};
+  border-radius: 50%;
+  animation: ${bounce} 1.4s ease-in-out infinite;
+  animation-delay: ${props => props.delay}s;
+`;
+
+const PulseCircle = styled.div<{ size: number; color: string }>`
+  width: ${props => props.size}px;
+  height: ${props => props.size}px;
+  background-color: ${props => props.color};
+  border-radius: 50%;
+  animation: ${pulse} 1.5s ease-in-out infinite;
+`;
+
+// Types
+export type LoadingType = 'spinner' | 'dots' | 'pulse';
+export type LoadingPosition = 'absolute' | 'relative';
+
+export interface LoadingIndicatorProps {
+  isLoading: boolean;
+  type?: LoadingType;
+  size?: number;
+  color?: string;
+  position?: LoadingPosition;
+  top?: string;
+  right?: string;
+  left?: string;
+  bottom?: string;
+  className?: string;
+}
+
+// Main component
+export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
+  isLoading,
+  type = 'spinner',
+  size = 20,
+  color = '#3498db',
+  position = 'absolute',
+  top = '8px',
+  right = '8px',
+  left,
+  bottom,
+  className
+}) => {
+  if (!isLoading) return null;
+
+  const renderLoadingContent = () => {
+    switch (type) {
+      case 'spinner':
+        return <SpinnerCircle size={size} color={color} />;
+      
+      case 'dots':
+        return (
+          <DotsContainer>
+            <Dot color={color} delay={0} />
+            <Dot color={color} delay={0.2} />
+            <Dot color={color} delay={0.4} />
+          </DotsContainer>
+        );
+      
+      case 'pulse':
+        return <PulseCircle size={size} color={color} />;
+      
+      default:
+        return <SpinnerCircle size={size} color={color} />;
+    }
+  };
+
+  return (
+    <LoadingContainer
+      position={position}
+      top={top}
+      right={right}
+      left={left}
+      bottom={bottom}
+      className={className}
+    >
+      {renderLoadingContent()}
+    </LoadingContainer>
+  );
+};
+
+// Hook để quản lý loading state
+export const useLoading = (initialState: boolean = false) => {
+  const [isLoading, setIsLoading] = React.useState(initialState);
+
+  const startLoading = React.useCallback(() => {
+    setIsLoading(true);
+  }, []);
+
+  const stopLoading = React.useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const toggleLoading = React.useCallback(() => {
+    setIsLoading(prev => !prev);
+  }, []);
+
+  return {
+    isLoading,
+    startLoading,
+    stopLoading,
+    toggleLoading,
+    setIsLoading
+  };
+};
+
+// Example usage component
+export const FileItem: React.FC<{
+  fileName: string;
+  onFileClick: () => Promise<void>;
+}> = ({ fileName, onFileClick }) => {
+  const { isLoading, startLoading, stopLoading } = useLoading();
+
+  const handleClick = async () => {
+    startLoading();
+    try {
+      await onFileClick();
+    } finally {
+      stopLoading();
+    }
+  };
+
+  return (
+    <FileItemContainer onClick={handleClick}>
+      <span>{fileName}</span>
+      <LoadingIndicator 
+        isLoading={isLoading}
+        type="spinner"
+        size={18}
+        color="#007bff"
+      />
+    </FileItemContainer>
+  );
+};
+
+const FileItemContainer = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  margin: 4px 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f8f9fa;
+    border-color: #007bff;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+`;
