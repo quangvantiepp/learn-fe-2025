@@ -1,0 +1,202 @@
+import React from 'react';
+import { LoadingIndicator, useLoading, FileItem } from './LoadingIndicator';
+
+// Example 1: Basic usage với file list
+const FileList: React.FC = () => {
+  const files = [
+    { id: 1, name: 'document.pdf' },
+    { id: 2, name: 'spreadsheet.xlsx' },
+    { id: 3, name: 'presentation.pptx' }
+  ];
+
+  const handleFileClick = async (fileId: number) => {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log(`File ${fileId} loaded`);
+  };
+
+  return (
+    <div>
+      {files.map(file => (
+        <FileItem
+          key={file.id}
+          fileName={file.name}
+          onFileClick={() => handleFileClick(file.id)}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Example 2: Custom loading với different positions
+const CustomLoadingExample: React.FC = () => {
+  const { isLoading, startLoading, stopLoading } = useLoading();
+
+  const handleAction = async () => {
+    startLoading();
+    try {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    } finally {
+      stopLoading();
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', padding: '20px', border: '1px solid #ddd' }}>
+      <h3>Custom Loading Positions</h3>
+      <button onClick={handleAction}>Start Action</button>
+      
+      {/* Loading ở góc phải trên */}
+      <LoadingIndicator 
+        isLoading={isLoading}
+        type="spinner"
+        position="absolute"
+        top="10px"
+        right="10px"
+      />
+      
+      {/* Loading ở góc trái dưới */}
+      <LoadingIndicator 
+        isLoading={isLoading}
+        type="dots"
+        position="absolute"
+        bottom="10px"
+        left="10px"
+        color="#e74c3c"
+      />
+    </div>
+  );
+};
+
+// Example 3: Multiple loading types
+const LoadingTypesExample: React.FC = () => {
+  const spinner = useLoading();
+  const dots = useLoading();
+  const pulse = useLoading();
+
+  const startAllLoading = () => {
+    spinner.startLoading();
+    dots.startLoading();
+    pulse.startLoading();
+  };
+
+  const stopAllLoading = () => {
+    spinner.stopLoading();
+    dots.stopLoading();
+    pulse.stopLoading();
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <button onClick={startAllLoading} style={{ marginRight: '10px' }}>
+          Start All
+        </button>
+        <button onClick={stopAllLoading}>
+          Stop All
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '20px' }}>
+        {/* Spinner */}
+        <div style={{ position: 'relative', padding: '40px', border: '1px solid #ddd' }}>
+          <h4>Spinner</h4>
+          <LoadingIndicator 
+            isLoading={spinner.isLoading}
+            type="spinner"
+            size={24}
+            color="#3498db"
+          />
+        </div>
+
+        {/* Dots */}
+        <div style={{ position: 'relative', padding: '40px', border: '1px solid #ddd' }}>
+          <h4>Dots</h4>
+          <LoadingIndicator 
+            isLoading={dots.isLoading}
+            type="dots"
+            color="#e74c3c"
+          />
+        </div>
+
+        {/* Pulse */}
+        <div style={{ position: 'relative', padding: '40px', border: '1px solid #ddd' }}>
+          <h4>Pulse</h4>
+          <LoadingIndicator 
+            isLoading={pulse.isLoading}
+            type="pulse"
+            size={20}
+            color="#2ecc71"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Example 4: Inline loading (relative position)
+const InlineLoadingExample: React.FC = () => {
+  const { isLoading, startLoading, stopLoading } = useLoading();
+
+  const handleSubmit = async () => {
+    startLoading();
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      alert('Form submitted!');
+    } finally {
+      stopLoading();
+    }
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h3>Inline Loading Example</h3>
+      <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+        <input type="text" placeholder="Enter something..." style={{ marginRight: '10px' }} />
+        <button type="submit" disabled={isLoading} style={{ position: 'relative' }}>
+          Submit
+          <LoadingIndicator 
+            isLoading={isLoading}
+            type="spinner"
+            position="relative"
+            size={16}
+            color="#ffffff"
+            right="auto"
+            top="auto"
+          />
+        </button>
+      </form>
+    </div>
+  );
+};
+
+// Main App component
+const App: React.FC = () => {
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>Loading Indicator Examples</h1>
+      
+      <section style={{ marginBottom: '40px' }}>
+        <h2>File List Example</h2>
+        <FileList />
+      </section>
+
+      <section style={{ marginBottom: '40px' }}>
+        <h2>Custom Positions</h2>
+        <CustomLoadingExample />
+      </section>
+
+      <section style={{ marginBottom: '40px' }}>
+        <h2>Different Loading Types</h2>
+        <LoadingTypesExample />
+      </section>
+
+      <section style={{ marginBottom: '40px' }}>
+        <h2>Inline Loading</h2>
+        <InlineLoadingExample />
+      </section>
+    </div>
+  );
+};
+
+export default App;
