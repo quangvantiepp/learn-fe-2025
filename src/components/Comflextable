@@ -1,0 +1,212 @@
+import React from 'react';
+
+interface CellConfig {
+  content: string;
+  rowSpan?: number;
+  colSpan?: number;
+  className?: string;
+  isHeader?: boolean;
+}
+
+interface TableConfig {
+  headers: CellConfig[][];
+  body: CellConfig[][];
+  className?: string;
+}
+
+const FlexibleTable: React.FC<{ config: TableConfig }> = ({ config }) => {
+  const defaultCellClass = "border border-gray-300 px-3 py-2 text-center";
+  const defaultHeaderClass = `${defaultCellClass} font-semibold text-gray-700 bg-gray-100`;
+
+  const renderCell = (cell: CellConfig, key: string) => {
+    const Tag = cell.isHeader ? 'th' : 'td';
+    const baseClass = cell.isHeader ? defaultHeaderClass : defaultCellClass;
+    const className = cell.className ? `${baseClass} ${cell.className}` : baseClass;
+    
+    const props: any = {
+      key,
+      className,
+      ...(cell.rowSpan && { rowSpan: cell.rowSpan }),
+      ...(cell.colSpan && { colSpan: cell.colSpan })
+    };
+
+    return <Tag {...props}>{cell.content}</Tag>;
+  };
+
+  return (
+    <div className="overflow-x-auto shadow-lg rounded-lg">
+      <table className={`w-full border-collapse bg-white ${config.className || ''}`}>
+        {config.headers.length > 0 && (
+          <thead>
+            {config.headers.map((row, i) => (
+              <tr key={i}>
+                {row.map((cell, j) => renderCell({ ...cell, isHeader: true }, `h-${i}-${j}`))}
+              </tr>
+            ))}
+          </thead>
+        )}
+        
+        <tbody>
+          {config.body.map((row, i) => (
+            <tr key={i} className="hover:bg-gray-50">
+              {row.map((cell, j) => renderCell(cell, `b-${i}-${j}`))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// Demo usage
+const ComplexTableDemo: React.FC = () => {
+  // Example 1: Original complex table
+  const complexConfig: TableConfig = {
+    headers: [
+      [
+        { content: 'Header 1', rowSpan: 2, className: 'bg-blue-100' },
+        { content: 'Header 2 (Group A)', colSpan: 3, className: 'bg-green-100' },
+        { content: 'Header 3 (Group B)', colSpan: 3, className: 'bg-yellow-100' },
+        { content: 'Header 4', rowSpan: 2, className: 'bg-red-100' }
+      ],
+      [
+        { content: 'A1', className: 'bg-green-50' },
+        { content: 'A2', className: 'bg-green-50' },
+        { content: 'A3', className: 'bg-green-50' },
+        { content: 'B1', className: 'bg-yellow-50' },
+        { content: 'B2', className: 'bg-yellow-50' },
+        { content: 'B3', className: 'bg-yellow-50' }
+      ]
+    ],
+    body: [
+      [
+        { content: 'Data 1-1' },
+        { content: 'Data 1-2' },
+        { content: 'Data 1-3' },
+        { content: 'Data 1-4' },
+        { content: 'Data 1-5' },
+        { content: 'Data 1-6' },
+        { content: 'Data 1-7' },
+        { content: 'Merged Col 8\n(5 rows)', rowSpan: 5, className: 'bg-purple-50 font-medium align-middle' }
+      ],
+      [
+        { content: 'Data 2-1' },
+        { content: 'Data 2-2' },
+        { content: 'Data 2-3' },
+        { content: 'Data 2-4' },
+        { content: 'Data 2-5' },
+        { content: 'Data 2-6' },
+        { content: 'Data 2-7' }
+      ],
+      [
+        { content: 'Data 3-1' },
+        { content: 'Data 3-2' },
+        { content: 'Data 3-3' },
+        { content: 'Data 3-4' },
+        { content: 'Data 3-5' },
+        { content: 'Data 3-6' },
+        { content: 'Data 3-7' }
+      ],
+      [
+        { content: 'Data 4-1' },
+        { content: 'Data 4-2' },
+        { content: 'Data 4-3' },
+        { content: 'Data 4-4' },
+        { content: 'Data 4-5' },
+        { content: 'Data 4-6' },
+        { content: 'Data 4-7' }
+      ],
+      [
+        { content: 'Data 5-1' },
+        { content: 'Data 5-2' },
+        { content: 'Data 5-3' },
+        { content: 'Data 5-4' },
+        { content: 'Data 5-5' },
+        { content: 'Data 5-6' },
+        { content: 'Data 5-7' }
+      ]
+    ]
+  };
+
+  // Example 2: Simple table with different merge patterns
+  const simpleConfig: TableConfig = {
+    headers: [
+      [
+        { content: 'Name', rowSpan: 2 },
+        { content: 'Contact Info', colSpan: 2, className: 'bg-blue-100' },
+        { content: 'Address', colSpan: 2, className: 'bg-green-100' }
+      ],
+      [
+        { content: 'Email' },
+        { content: 'Phone' },
+        { content: 'City' },
+        { content: 'Country' }
+      ]
+    ],
+    body: [
+      [
+        { content: 'John Doe' },
+        { content: 'john@email.com' },
+        { content: '+1234567890' },
+        { content: 'New York' },
+        { content: 'USA' }
+      ],
+      [
+        { content: 'Jane Smith' },
+        { content: 'jane@email.com' },
+        { content: '+0987654321' },
+        { content: 'London' },
+        { content: 'UK' }
+      ]
+    ]
+  };
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen space-y-8">
+      <h1 className="text-2xl font-bold">Flexible Table Component</h1>
+      
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Example 1: Complex Table (Original)</h2>
+        <FlexibleTable config={complexConfig} />
+      </div>
+      
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Example 2: Simple Contact Table</h2>
+        <FlexibleTable config={simpleConfig} />
+      </div>
+
+      {/* Usage Guide */}
+      <div className="mt-8 p-4 bg-white rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-3">Usage Guide:</h3>
+        <pre className="text-sm bg-gray-100 p-3 rounded overflow-x-auto">
+{`const config: TableConfig = {
+  headers: [
+    [
+      { content: 'Text', rowSpan: 2, className: 'bg-blue-100' },
+      { content: 'Merged', colSpan: 3 }
+    ],
+    [
+      { content: 'Sub 1' },
+      { content: 'Sub 2' },
+      { content: 'Sub 3' }
+    ]
+  ],
+  body: [
+    [
+      { content: 'Row 1 Col 1' },
+      { content: 'Row 1 Col 2' },
+      { content: 'Merged Cell', rowSpan: 2, className: 'bg-red-50' }
+    ],
+    [
+      { content: 'Row 2 Col 1' },
+      { content: 'Row 2 Col 2' }
+    ]
+  ]
+};`}
+        </pre>
+      </div>
+    </div>
+  );
+};
+
+export default ComplexTableDemo;
