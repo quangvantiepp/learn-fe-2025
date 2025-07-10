@@ -1,0 +1,167 @@
+import React from 'react';
+
+const ComplexTable: React.FC = () => {
+  // Sample data for demonstration
+  const bodyData = [
+    { col1: 'Data 1-1', col2: 'Data 1-2', col3: 'Data 1-3', col4: 'Data 1-4', col5: 'Data 1-5', col6: 'Data 1-6', col7: 'Data 1-7' },
+    { col1: 'Data 2-1', col2: 'Data 2-2', col3: 'Data 2-3', col4: 'Data 2-4', col5: 'Data 2-5', col6: 'Data 2-6', col7: 'Data 2-7' },
+    { col1: 'Data 3-1', col2: 'Data 3-2', col3: 'Data 3-3', col4: 'Data 3-4', col5: 'Data 3-5', col6: 'Data 3-6', col7: 'Data 3-7' },
+    { col1: 'Data 4-1', col2: 'Data 4-2', col3: 'Data 4-3', col4: 'Data 4-4', col5: 'Data 4-5', col6: 'Data 4-6', col7: 'Data 4-7' },
+    { col1: 'Data 5-1', col2: 'Data 5-2', col3: 'Data 5-3', col4: 'Data 5-4', col5: 'Data 5-5', col6: 'Data 5-6', col7: 'Data 5-7' },
+  ];
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Complex Table with Merged Headers & Cells</h1>
+      
+      <div className="overflow-x-auto shadow-lg rounded-lg">
+        <table className="w-full border-collapse bg-white">
+          {/* Header */}
+          <thead>
+            {/* Header Row 1 */}
+            <tr>
+              {/* Cột 1 - gộp với row 2 */}
+              <th 
+                rowSpan={2} 
+                className="border-2 border-gray-300 bg-blue-100 px-4 py-3 text-center font-semibold text-gray-700 align-middle"
+              >
+                Header 1
+              </th>
+              
+              {/* Cột 2 - gộp 3 cột của row 2 */}
+              <th 
+                colSpan={3} 
+                className="border-2 border-gray-300 bg-green-100 px-4 py-3 text-center font-semibold text-gray-700"
+              >
+                Header 2 (Group A)
+              </th>
+              
+              {/* Cột 3 - gộp 3 cột của row 2 */}
+              <th 
+                colSpan={3} 
+                className="border-2 border-gray-300 bg-yellow-100 px-4 py-3 text-center font-semibold text-gray-700"
+              >
+                Header 3 (Group B)
+              </th>
+              
+              {/* Cột 4 - gộp với row 2 */}
+              <th 
+                rowSpan={2} 
+                className="border-2 border-gray-300 bg-red-100 px-4 py-3 text-center font-semibold text-gray-700 align-middle"
+              >
+                Header 4
+              </th>
+            </tr>
+            
+            {/* Header Row 2 */}
+            <tr>
+              {/* 3 cột thuộc Group A */}
+              <th className="border-2 border-gray-300 bg-green-50 px-3 py-2 text-center font-medium text-gray-600">
+                A1
+              </th>
+              <th className="border-2 border-gray-300 bg-green-50 px-3 py-2 text-center font-medium text-gray-600">
+                A2
+              </th>
+              <th className="border-2 border-gray-300 bg-green-50 px-3 py-2 text-center font-medium text-gray-600">
+                A3
+              </th>
+              
+              {/* 3 cột thuộc Group B */}
+              <th className="border-2 border-gray-300 bg-yellow-50 px-3 py-2 text-center font-medium text-gray-600">
+                B1
+              </th>
+              <th className="border-2 border-gray-300 bg-yellow-50 px-3 py-2 text-center font-medium text-gray-600">
+                B2
+              </th>
+              <th className="border-2 border-gray-300 bg-yellow-50 px-3 py-2 text-center font-medium text-gray-600">
+                B3
+              </th>
+            </tr>
+          </thead>
+          
+          {/* Body */}
+          <tbody>
+            {bodyData.map((row, index) => (
+              <tr key={index} className="hover:bg-gray-50">
+                {/* Cột 1 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col1}
+                </td>
+                
+                {/* Cột 2 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col2}
+                </td>
+                
+                {/* Cột 3 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col3}
+                </td>
+                
+                {/* Cột 4 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col4}
+                </td>
+                
+                {/* Cột 5 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col5}
+                </td>
+                
+                {/* Cột 6 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col6}
+                </td>
+                
+                {/* Cột 7 */}
+                <td className="border border-gray-300 px-3 py-2 text-center">
+                  {row.col7}
+                </td>
+                
+                {/* Cột 8 - chỉ hiển thị ở hàng đầu tiên và gộp tất cả các hàng */}
+                {index === 0 && (
+                  <td 
+                    rowSpan={bodyData.length} 
+                    className="border border-gray-300 px-3 py-2 text-center align-middle bg-purple-50 font-medium"
+                  >
+                    Merged Column 8
+                    <br />
+                    <span className="text-sm text-gray-500">
+                      ({bodyData.length} rows)
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Explanation */}
+      <div className="mt-6 p-4 bg-white rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-3 text-gray-800">Cấu trúc Table:</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <h3 className="font-medium text-gray-700 mb-2">Header:</h3>
+            <ul className="space-y-1 text-gray-600">
+              <li>• Row 1: 4 cột chính</li>
+              <li>• Row 2: 8 cột con</li>
+              <li>• Cột 1 & 4: gộp 2 hàng (rowSpan=2)</li>
+              <li>• Cột 2 & 3: mỗi cột gộp 3 cột con (colSpan=3)</li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-700 mb-2">Body:</h3>
+            <ul className="space-y-1 text-gray-600">
+              <li>• 8 cột dữ liệu</li>
+              <li>• Nhiều hàng tùy theo data</li>
+              <li>• Cột 8: gộp tất cả hàng (rowSpan=total rows)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ComplexTable;
